@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Bauka07/SocialApp/internal/database"
+	"github.com/Bauka07/SocialApp/internal/models"
 	"github.com/Bauka07/SocialApp/internal/routes"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -24,10 +25,14 @@ func main() {
 	}))
 	//Connect DB
 	database.ConnectDB()
-	err := database.DB.AutoMigrate(&models.UserModel{})
+	err := database.DB.AutoMigrate(&models.User{}, &models.Post{})
 	fmt.Println(err)
 	//Routes
 	routes.UserRoutes(r)
+
+	r.GET("/", func(c *gin.Context) {
+		c.JSON(200, gin.H{"message": "Server Running Successfully..."})
+	})
 
 	r.Run(":8080")
 }
