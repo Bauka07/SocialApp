@@ -11,7 +11,7 @@ import (
 var DB *gorm.DB
 
 func ConnectDB() {
-	dsn := fmt.Sprintf("host=localhost user=postgres password=trust dbname=SocApp port=5432 sslmode=disable")
+	dsn := "postgresql://admin:r6CE8362jHPGblokTzsRrHDeehOe7gq6@dpg-d3p6ah15pdvs73adnj40-a.frankfurt-postgres.render.com/socapp"
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
