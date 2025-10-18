@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import Sidebar from "../components/Sidebar";
 import { toast } from "react-toastify";
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { FiEdit3 } from "react-icons/fi"
 
 interface Post {
   id: number;
@@ -28,16 +29,22 @@ const Profile: React.FC = () => {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [newPost, setNewPost] = useState({ title: "", content: "" });
-  const navigate = useNavigate()
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // NEW: Track sidebar state
+  const navigate = useNavigate();
   const token = localStorage.getItem("token");
+  const [editingUsername, setEditingUsername] = useState(false);
+  const [editingEmail, setEditingEmail] = useState(false);
+  const usernameRef = useRef<HTMLInputElement | null>(null);
+  const emailRef = useRef<HTMLInputElement | null>(null);
 
   // Fetch user data
   useEffect(() => {
     if (!token) {
       toast.error("No token found");
       setLoading(false);
-      navigate("/")
+      navigate("/");
       return;
     }
 
@@ -55,9 +62,9 @@ const Profile: React.FC = () => {
         toast.error("Failed to load profile");
       })
       .finally(() => setLoading(false));
-  }, [token]);
+  }, [token, navigate]);
 
-  // Handle profile update
+  // Handle profile update (with optional email verification)
   const handleUpdateProfile = async () => {
     try {
       const res = await axios.put(
@@ -65,9 +72,14 @@ const Profile: React.FC = () => {
         { username, email },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      toast.success("Profile updated");
+
       setUser(res.data.user);
-    } catch {
+      toast.success("Profile updated successfully");
+
+      if (res.data.email_verification_required) {
+        toast.info("Please verify your new email address. Check your inbox!");
+      }
+    } catch (err) {
       toast.error("Failed to update profile");
     }
   };
@@ -91,24 +103,38 @@ const Profile: React.FC = () => {
         }
       );
       toast.success("Profile image updated");
-      setUser((prev) => (prev ? { ...prev, image_url: res.data.image_url } : prev));
+      setUser((prev) =>
+        prev ? { ...prev, image_url: res.data.image_url } : prev
+      );
     } catch {
       toast.error("Image upload failed");
     }
   };
 
-  // Handle password change
+  // Handle password change with confirm check
   const handleChangePassword = async () => {
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      toast.warn("Please fill all password fields");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast.error("New passwords do not match");
+      return;
+    }
+
     try {
       await axios.put(
         "http://localhost:8080/users/password",
         { old_password: oldPassword, new_password: newPassword },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      toast.success("Password updated");
+
+      toast.success("Password updated successfully");
       setShowPasswordModal(false);
       setOldPassword("");
       setNewPassword("");
+      setConfirmPassword("");
     } catch {
       toast.error("Failed to change password");
     }
@@ -116,6 +142,11 @@ const Profile: React.FC = () => {
 
   // Handle create post
   const handleCreatePost = async () => {
+    if (!newPost.title.trim() || !newPost.content.trim()) {
+      toast.warn("Title and content are required");
+      return;
+    }
+
     try {
       const res = await axios.post(
         "http://localhost:8080/users/posts",
@@ -147,31 +178,40 @@ const Profile: React.FC = () => {
     }
   };
 
-  if (loading) return <p className="text-center mt-10">Loading profile...</p>;
-  if (!user) return <p className="text-center mt-10">No profile found</p>;
+  if (loading)
+    return <p className="text-center mt-10 text-gray-600">Loading profile...</p>;
+  if (!user)
+    return <p className="text-center mt-10 text-gray-600">No profile found</p>;
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <Sidebar />
+    <div className="flex flex-col md:flex-row min-h-screen bg-gray-50">
+      <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
 
-      <main className="flex-1 p-8 ml-0 md:ml-64 transition-all duration-300">
+      {/* FIXED: Dynamic margin based on sidebar state */}
+      <main className={`flex-1 p-6 md:p-8 ml-0 transition-all duration-300 ${
+        sidebarCollapsed ? 'md:ml-20' : 'md:ml-64'
+      }`}>
         {/* Profile Section */}
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">My Profile</h1>
+        <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center md:text-left">
+          My Profile
+        </h1>
 
         <div className="bg-white p-6 rounded-xl shadow-md mb-6">
-          <div className="flex items-center space-x-6">
+          {/* Profile Image + Upload */}
+          <div className="flex flex-col sm:flex-row items-center sm:space-x-6 space-y-4 sm:space-y-0">
             <img
               src={
                 user.image_url
                   ? `http://localhost:8080/${user.image_url}`
                   : "/default-avatar.png"
               }
-              alt=""
-              className="w-24 h-24 bg-gray-700 rounded-full border"
+              alt="profile"
+              className="w-24 h-24 bg-gray-200 rounded-full border object-cover"
             />
-            <div className="flex items-center justify-between">
+
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
               <input
-                className="border px-3 rounded py-1 cursor-pointer w-2/4"
+                className="border px-3 py-2 rounded w-full sm:w-60 cursor-pointer"
                 type="file"
                 onChange={(e) =>
                   setSelectedImage(e.target.files ? e.target.files[0] : null)
@@ -179,54 +219,110 @@ const Profile: React.FC = () => {
               />
               <button
                 onClick={handleImageUpload}
-                className=" bg-orange-500 cursor-pointer hover:bg-orange-600 text-white py-1 px-3 rounded"
+                className="bg-orange-500 hover:bg-orange-600 text-white py-2 px-4 rounded w-full sm:w-auto"
               >
                 Upload
               </button>
             </div>
           </div>
 
-          <div className="mt-6">
-            <label className="block text-gray-700">Username</label>
-            <input
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="border p-2 rounded w-full mb-4"
-            />
-
-            <label className="block text-gray-700">Email</label>
-            <input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="border p-2 rounded w-full mb-4"
-            />
-
-            <div className="flex flex-col sm:flex-row flex-wrap  gap-7 ">
-              <Button
-                  variant="default"
-                  onClick={handleUpdateProfile}
-                  className=" py-5 px-6"
-              >
-                  Save Changes
-              </Button>
-
-              <Button
-                  variant="default"
-                  onClick={() => setShowPasswordModal(true)}
-                  className="bg-gray-700 hover:bg-gray-800 text-white py-5 px-6"
-              >
-                  Change Password
-              </Button>
+          {/* Editable Fields */}
+          <div className="mt-6 space-y-6">
+            {/* Username Field */}
+            <div>
+              <label className="block text-gray-700 font-medium mb-1">Username</label>
+              <div className="flex items-center gap-2">
+                <input
+                  ref={usernameRef}
+                  type="text"
+                  value={username}
+                  readOnly={!editingUsername}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className={`border p-2 rounded w-full ${
+                    editingUsername ? "bg-white" : "bg-gray-100 cursor-not-allowed"
+                  }`}
+                />
+                {editingUsername ? (
+                  <button
+                    onClick={() => {
+                      handleUpdateProfile();
+                      setEditingUsername(false);
+                    }}
+                    className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded"
+                  >
+                    Save
+                  </button>
+                ) : (
+                  <FiEdit3
+                    className="w-5 h-5 text-gray-600 cursor-pointer hover:text-orange-500 transition"
+                    onClick={() => {
+                      setUsername("");
+                      setEditingUsername(true);
+                      setTimeout(() => usernameRef.current?.focus(), 0);
+                    }}
+                  />
+                )}
+              </div>
             </div>
+
+            {/* Email Field */}
+            <div>
+              <label className="block text-gray-700 font-medium mb-1">Email</label>
+              <div className="flex items-center gap-2">
+                <input
+                  ref={emailRef}
+                  type="email"
+                  value={email}
+                  readOnly={!editingEmail}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={`border p-2 rounded w-full ${
+                    editingEmail ? "bg-white" : "bg-gray-100 cursor-not-allowed"
+                  }`}
+                />
+                {editingEmail ? (
+                  <button
+                    onClick={() => {
+                      handleUpdateProfile();
+                      setEditingEmail(false);
+                    }}
+                    className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded"
+                  >
+                    Save
+                  </button>
+                ) : (
+                  <FiEdit3
+                    className="w-5 h-5 text-gray-600 cursor-pointer hover:text-orange-500 transition"
+                    onClick={() => {
+                      setEmail("");
+                      setEditingEmail(true);
+                      setTimeout(() => emailRef.current?.focus(), 0);
+                    }}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Change Password Button */}
+          <div className="flex justify-start mt-6">
+            <Button
+              variant="default"
+              onClick={() => setShowPasswordModal(true)}
+              className="bg-gray-700 hover:bg-gray-800 text-white py-3 px-5"
+            >
+              Change Password
+            </Button>
           </div>
         </div>
 
         {/* Posts Section */}
-        <h3 className="text-2xl font-bold mb-4 text-gray-800">My Posts</h3>
+        <h3 className="text-2xl font-bold mb-4 text-gray-800 text-center md:text-left">
+          My Posts
+        </h3>
 
         {/* Add new post */}
         <div className="bg-white p-4 rounded-xl shadow mb-6">
-          <h4 className="text-lg font-semibold mb-2">Add New Post</h4>
+          <h4 className="text-lg font-semibold mb-3">Add New Post</h4>
           <input
             placeholder="Post title"
             value={newPost.title}
@@ -237,6 +333,7 @@ const Profile: React.FC = () => {
             placeholder="Post content"
             value={newPost.content}
             onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
+            rows={5}
             className="border p-2 rounded w-full mb-2 resize-none"
           />
           <button
@@ -265,16 +362,19 @@ const Profile: React.FC = () => {
               </div>
             ))
           ) : (
-            <p>No posts yet.</p>
+            <p className="text-gray-600">No posts yet.</p>
           )}
         </div>
       </main>
 
       {/* Password Modal */}
       {showPasswordModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
-            <h2 className="text-xl font-semibold mb-4">Change Password</h2>
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 px-4 z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+            <h2 className="text-xl font-semibold mb-4 text-center">
+              Change Password
+            </h2>
+
             <input
               type="password"
               placeholder="Old password"
@@ -287,8 +387,16 @@ const Profile: React.FC = () => {
               placeholder="New password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
+              className="border p-2 rounded w-full mb-2"
+            />
+            <input
+              type="password"
+              placeholder="Confirm new password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
               className="border p-2 rounded w-full mb-4"
             />
+
             <div className="flex justify-end space-x-2">
               <button
                 onClick={() => setShowPasswordModal(false)}
