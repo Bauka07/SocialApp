@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -12,9 +12,70 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useNavigate } from 'react-router-dom'
+import { toast } from "react-toastify"
+import axios, { AxiosError } from "axios"
+
+type LoginRequest = {
+  email: string;
+  password: string;
+}
+
+type ApiError = {
+  message: string;
+  status?: number;
+}
+
+type LoginResponse = {
+  message: string;
+  token: string;
+  user: {
+    id: number;
+  }
+}
 
 const Login: React.FC = () => {
   const navigate = useNavigate()
+  const [formData, setFormData] = useState<LoginRequest>({
+    email: "",
+    password: "",
+  })
+  const [loading, setLoading] = useState<boolean>(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ): void => {
+    const { id, value } = e.target
+    setFormData((prev) => ({
+      ...prev,
+      [id]: value,
+    }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+
+    try {
+      const response = await axios.post<LoginResponse>(
+        "http://localhost:8080/users/login", 
+        formData, 
+        {
+          headers: {"Content-Type": "application/json",},
+        },
+      )
+      const { token, user } = response.data
+      setTimeout(() => navigate("/dashboard"), 500)
+      setTimeout(() => toast.success("Logged in successfully!"), 500)
+      localStorage.setItem("token", token)
+    } catch (err) {
+      const error = err as AxiosError<ApiError>
+      setError(error.response?.data?.message || "Something went wrong.")
+    } finally {
+      setLoading(false)
+    }
+  }
   return (
     <div className='flex items-center justify-center h-screen w-full'>
       <Card className="w-full max-w-sm">
@@ -22,7 +83,7 @@ const Login: React.FC = () => {
           <CardTitle className='text-3xl text-center'>Login to your account</CardTitle>
         </CardHeader>
         <CardContent>
-          <form>
+          <form onSubmit={handleSubmit}>
             <div className="flex flex-col gap-6">
               <div className="grid gap-2">
                 <Label htmlFor="email">Email</Label>
@@ -31,6 +92,8 @@ const Login: React.FC = () => {
                   type="email"
                   placeholder="m@example.com"
                   required
+                  onChange={handleChange}
+                  value={formData.email}
                 />
               </div>
               <div className="grid gap-2">
@@ -43,21 +106,23 @@ const Login: React.FC = () => {
                     Forgot your password?
                   </a>
                 </div>
-                <Input id="password" type="password" required />
+                <Input id="password" type="password" required onChange={handleChange} value={formData.password} />
+              </div>
+              {error && <p className="text-red-500 text-sm">{error}</p>}
+              <div className='flex justify-center'>
+                <Button type="submit" className="w-[70%]" disabled={loading}>
+                  {loading ? "Logging in..." : "Login"}
+                </Button>
               </div>
             </div>
           </form>
         </CardContent>
         <CardFooter className="flex-col gap-2">
-          <Button type="submit" className="w-[70%]">
-            Login
-          </Button>
           <Button variant="outline" className="w-[70%]">
             Login with Google
           </Button>
             <h4>Don't have an account?<Button variant="link" onClick={() => navigate("/register")}>Sign Up</Button></h4>
-            
-        </CardFooter>
+          </CardFooter>
       </Card>
     </div>
   )

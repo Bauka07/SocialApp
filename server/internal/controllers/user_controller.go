@@ -36,6 +36,6 @@ func Login(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "User not found"})
 		return
 	}
-
-	c.JSON(200, gin.H{"message": "Logged in Successfully!"})
+	token := "s"
+	c.JSON(200, gin.H{"message": "Logged in Successfully!", "token": token, "user": user.ID})
 }

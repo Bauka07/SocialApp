@@ -10,6 +10,7 @@ import Navbar from './components/Navbar'
 import { ToastContainer } from "react-toastify"
 import Footer from './components/Footer'
 import Dashboard from './pages/Dashboard'
+import ProtectedRoute from './components/ProtectedRoute'
 const App = () => {
   const location = useLocation();
   const hideNavbarRoutes = ['/login', '/register'];
@@ -34,11 +35,16 @@ const App = () => {
         {!shouldHideNavbar && <Navbar/>}
         <Routes>
           <Route path='/' element={<Home/>} />
-          <Route path='/dashboard' element={<Dashboard/>} />
           <Route path='/about' element={<About/>} />
           <Route path='/contact' element={<Contact/>} />
           <Route path='/register' element={<Register/>} />
           <Route path='/login' element={<Login/>} />
+
+          <Route path='/dashboard' element={
+            <ProtectedRoute>
+              <Dashboard/>
+            </ProtectedRoute>
+          } />
         </Routes>
       </div>
       {!shouldHideNavbar && <Footer/>}
