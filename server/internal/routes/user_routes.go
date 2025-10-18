@@ -2,6 +2,7 @@ package routes
 
 import (
 	"github.com/Bauka07/SocialApp/internal/controllers"
+	"github.com/Bauka07/SocialApp/internal/middleware"
 	"github.com/gin-gonic/gin"
 )
 
@@ -10,5 +11,8 @@ func UserRoutes(r *gin.Engine) {
 	{
 		auth.POST("/register", controllers.Register)
 		auth.POST("/login", controllers.Login)
+
+		// Protected routes
+		auth.GET("/dashboard", middleware.AuthCheck(), controllers.GetDashboard)
 	}
 }

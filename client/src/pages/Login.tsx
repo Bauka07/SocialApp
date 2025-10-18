@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -21,8 +21,7 @@ type LoginRequest = {
 }
 
 type ApiError = {
-  message: string;
-  status?: number;
+  error: string;
 }
 
 type LoginResponse = {
@@ -41,10 +40,16 @@ const Login: React.FC = () => {
   })
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
-
+  useEffect(() => {
+    const token = localStorage.getItem("token")
+    if (token) {
+      navigate("/dashboard")
+    }
+  }, [navigate])
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement>
   ): void => {
+    setError(null)
     const { id, value } = e.target
     setFormData((prev) => ({
       ...prev,
@@ -66,12 +71,12 @@ const Login: React.FC = () => {
         },
       )
       const { token, user } = response.data
-      setTimeout(() => navigate("/dashboard"), 500)
-      setTimeout(() => toast.success("Logged in successfully!"), 500)
       localStorage.setItem("token", token)
+      toast.success("Logged in successfully!")
+      navigate("/dashboard")
     } catch (err) {
       const error = err as AxiosError<ApiError>
-      setError(error.response?.data?.message || "Something went wrong.")
+      setError(error.response?.data?.error || "Something went wrong.")
     } finally {
       setLoading(false)
     }

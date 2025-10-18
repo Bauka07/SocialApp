@@ -10,10 +10,11 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// Middleware to protect routes
 func AuthCheck() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		//Getting Token from COntext Header
+		//Getting Token from Context Header
 		authHeader := c.GetHeader("Authorization")
 
 		//Checks is Header is empty

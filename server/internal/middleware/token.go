@@ -19,13 +19,14 @@ type Claims struct {
 // Creates Token
 func CreateToken(user models.User) (string, error) {
 
-	expirationTime := time.Now().Add(time.Minute * 15)
+	expirationTime := time.Now().Add(time.Minute * 10)
 
 	claims := &Claims{
 		Username: user.Username,
 		Email:    user.Email,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
 

@@ -1,28 +1,59 @@
-import React from "react";
-import Sidebar from "../components/Sidebar";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+
+type Post = {
+  id: number;
+  title: string;
+  content: string;
+  author?: string;
+};
 
 const Dashboard: React.FC = () => {
-  const posts = [
-    { id: 1, title: "First Post", content: "This is my first post on Mini Social!" },
-    { id: 2, title: "Good Morning!", content: "Have a productive and happy day!" },
-  ];
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    axios
+      .get("http://localhost:8080/users/dashboard", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      .then((res) => {
+        setPosts(res.data.posts || []);
+      })
+      .catch((err) => {
+        console.error(err);
+        setError("Failed to load posts.");
+      });
+  }, []);
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar />
-
-      {/* Main content should always be visible */}
       <main className="flex-1 p-8 ml-0 md:ml-64 transition-all duration-300">
         <h1 className="text-3xl font-bold text-gray-800 mb-6">Dashboard</h1>
 
-        <div className="grid gap-6">
-          {posts.map((post) => (
-            <div key={post.id} className="bg-white p-6 rounded-xl shadow-md">
-              <h2 className="text-xl font-semibold text-blue-600">{post.title}</h2>
-              <p className="text-gray-700 mt-2">{post.content}</p>
-            </div>
-          ))}
-        </div>
+        {error && <p className="text-red-500">{error}</p>}
+
+        {posts.length === 0 ? (
+          <p>No posts yet.</p>
+        ) : (
+          <div className="grid gap-6">
+            {posts.map((post) => (
+              <div key={post.id} className="bg-white p-6 rounded-xl shadow-md">
+                <h2 className="text-xl font-semibold text-blue-600">
+                  {post.title}
+                </h2>
+                <p className="text-gray-700 mt-2">{post.content}</p>
+                {post.author && (
+                  <p className="text-sm text-gray-500 mt-1">by {post.author}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </main>
     </div>
   );

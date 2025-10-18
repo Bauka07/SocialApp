@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -20,7 +20,7 @@ type RegisterRequest = {
 }
 
 type RegisterResponse = {
-  message: string;
+  error: string;
   token: string;
   user: {
     id: number
@@ -28,7 +28,7 @@ type RegisterResponse = {
 }
 
 interface ApiError {
-  message: string
+  error: string
 }
 
 const Register: React.FC = () => {
@@ -41,9 +41,15 @@ const Register: React.FC = () => {
 
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
-
+  useEffect(() => {
+    const token = localStorage.getItem("token")
+    if (token) {
+      navigate("/dashboard")
+    }
+  }, [navigate])
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target
+    setError(null)
     setFormData((prev) => ({
       ...prev,
       [id]: value,
@@ -63,13 +69,13 @@ const Register: React.FC = () => {
           headers: { "Content-Type": "application/json" },
         }
       )
-      setTimeout(() => navigate("/dashboard"), 500)
-      setTimeout(() => toast.success("Registered successfully"), 500)
-      const { token, message, user } = response.data
+      const { token, error, user } = response.data
       localStorage.setItem("token", token)
+      toast.success("Logged in successfully!")
+      navigate("/dashboard")
     } catch (err) {
       const error = err as AxiosError<ApiError>
-      setError(error.response?.data?.message || "Something went wrong.")
+      setError(error.response?.data?.error || "Something went wrong.")
     } finally {
       setLoading(false)
     }
