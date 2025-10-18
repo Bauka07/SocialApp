@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
-import Sidebar from "../components/Sidebar";
 import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -31,7 +30,6 @@ const Profile: React.FC = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [newPost, setNewPost] = useState({ title: "", content: "" });
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // NEW: Track sidebar state
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
   const [editingUsername, setEditingUsername] = useState(false);
@@ -184,193 +182,186 @@ const Profile: React.FC = () => {
     return <p className="text-center mt-10 text-gray-600">No profile found</p>;
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen bg-gray-50">
-      <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
+    <div className="min-h-screen bg-gray-50 p-6 md:p-8">
+      {/* Profile Section */}
+      <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center md:text-left">
+        My Profile
+      </h1>
 
-      {/* FIXED: Dynamic margin based on sidebar state */}
-      <main className={`flex-1 p-6 md:p-8 ml-0 transition-all duration-300 ${
-        sidebarCollapsed ? 'md:ml-20' : 'md:ml-64'
-      }`}>
-        {/* Profile Section */}
-        <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center md:text-left">
-          My Profile
-        </h1>
+      <div className="bg-white shadow-[0_5px_15px_rgba(0,0,0,0.35)] p-6 rounded-xl mb-6">
+        {/* Profile Image + Upload */}
+        <div className="flex flex-col sm:flex-row items-center sm:space-x-6 space-y-4 sm:space-y-0">
+          <img
+            src={
+              user.image_url
+                ? `http://localhost:8080/${user.image_url}`
+                : "/default-avatar.png"
+            }
+            alt="profile"
+            className="w-24 h-24 bg-gray-200 rounded-full border object-cover"
+          />
 
-        <div className="bg-white p-6 rounded-xl shadow-md mb-6">
-          {/* Profile Image + Upload */}
-          <div className="flex flex-col sm:flex-row items-center sm:space-x-6 space-y-4 sm:space-y-0">
-            <img
-              src={
-                user.image_url
-                  ? `http://localhost:8080/${user.image_url}`
-                  : "/default-avatar.png"
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+            <input
+              className="border px-3 py-2 rounded w-full sm:w-60 cursor-pointer"
+              type="file"
+              onChange={(e) =>
+                setSelectedImage(e.target.files ? e.target.files[0] : null)
               }
-              alt="profile"
-              className="w-24 h-24 bg-gray-200 rounded-full border object-cover"
             />
+            <button
+              onClick={handleImageUpload}
+              className="bg-orange-500 hover:bg-orange-600 text-white py-2 px-4 rounded w-full sm:w-auto"
+            >
+              Upload
+            </button>
+          </div>
+        </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+        {/* Editable Fields */}
+        <div className="mt-6 space-y-6">
+          {/* Username Field */}
+          <div>
+            <label className="block text-gray-700 font-medium mb-1">Username</label>
+            <div className="flex items-center gap-2">
               <input
-                className="border px-3 py-2 rounded w-full sm:w-60 cursor-pointer"
-                type="file"
-                onChange={(e) =>
-                  setSelectedImage(e.target.files ? e.target.files[0] : null)
-                }
+                ref={usernameRef}
+                type="text"
+                value={username}
+                readOnly={!editingUsername}
+                onChange={(e) => setUsername(e.target.value)}
+                className={`border p-2 rounded w-full ${
+                  editingUsername ? "bg-white" : "bg-gray-100 cursor-not-allowed"
+                }`}
               />
+              {editingUsername ? (
+                <button
+                  onClick={() => {
+                    handleUpdateProfile();
+                    setEditingUsername(false);
+                  }}
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded"
+                >
+                  Save
+                </button>
+              ) : (
+                <FiEdit3
+                  className="w-5 h-5 text-gray-600 cursor-pointer hover:text-orange-500 transition"
+                  onClick={() => {
+                    setUsername("");
+                    setEditingUsername(true);
+                    setTimeout(() => usernameRef.current?.focus(), 0);
+                  }}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Email Field */}
+          <div>
+            <label className="block text-gray-700 font-medium mb-1">Email</label>
+            <div className="flex items-center gap-2">
+              <input
+                ref={emailRef}
+                type="email"
+                value={email}
+                readOnly={!editingEmail}
+                onChange={(e) => setEmail(e.target.value)}
+                className={`border p-2 rounded w-full ${
+                  editingEmail ? "bg-white" : "bg-gray-100 cursor-not-allowed"
+                }`}
+              />
+              {editingEmail ? (
+                <button
+                  onClick={() => {
+                    handleUpdateProfile();
+                    setEditingEmail(false);
+                  }}
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded"
+                >
+                  Save
+                </button>
+              ) : (
+                <FiEdit3
+                  className="w-5 h-5 text-gray-600 cursor-pointer hover:text-orange-500 transition"
+                  onClick={() => {
+                    setEmail("");
+                    setEditingEmail(true);
+                    setTimeout(() => emailRef.current?.focus(), 0);
+                  }}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Change Password Button */}
+        <div className="flex justify-start mt-6">
+          <Button
+            variant="default"
+            onClick={() => setShowPasswordModal(true)}
+            className="bg-gray-700 hover:bg-gray-800 text-white py-3 px-5"
+          >
+            Change Password
+          </Button>
+        </div>
+      </div>
+
+      {/* Posts Section */}
+      <h3 className="text-2xl font-bold mb-4 text-gray-800 text-center md:text-left">
+        My Posts
+      </h3>
+
+      {/* Add new post */}
+      <div className="bg-white shadow-[0_5px_15px_rgba(0,0,0,0.35)] p-4 rounded-xl mb-6">
+        <h4 className="text-lg font-semibold mb-3">Add New Post</h4>
+        <input
+          placeholder="Post title"
+          value={newPost.title}
+          onChange={(e) => setNewPost({ ...newPost, title: e.target.value })}
+          className="border p-2 rounded w-full mb-2"
+        />
+        <textarea
+          placeholder="Post content"
+          value={newPost.content}
+          onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
+          rows={5}
+          className="border p-2 rounded w-full mb-2 resize-none"
+        />
+        <button
+          onClick={handleCreatePost}
+          className="bg-orange-500 hover:bg-orange-600 text-white py-2 px-4 rounded"
+        >
+          Add Post
+        </button>
+      </div>
+
+      {/* Show posts */}
+      <div className="grid gap-4">
+        {user.posts.length > 0 ? (
+          user.posts.map((post) => (
+            <div key={post.id} className="bg-white p-4 rounded-lg shadow">
+              <h4 className="text-lg font-semibold text-orange-600">
+                {post.title}
+              </h4>
+              <p className="text-gray-700 mt-2">{post.content}</p>
               <button
-                onClick={handleImageUpload}
-                className="bg-orange-500 hover:bg-orange-600 text-white py-2 px-4 rounded w-full sm:w-auto"
+                onClick={() => handleDeletePost(post.id)}
+                className="mt-2 bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded"
               >
-                Upload
+                Delete
               </button>
             </div>
-          </div>
-
-          {/* Editable Fields */}
-          <div className="mt-6 space-y-6">
-            {/* Username Field */}
-            <div>
-              <label className="block text-gray-700 font-medium mb-1">Username</label>
-              <div className="flex items-center gap-2">
-                <input
-                  ref={usernameRef}
-                  type="text"
-                  value={username}
-                  readOnly={!editingUsername}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className={`border p-2 rounded w-full ${
-                    editingUsername ? "bg-white" : "bg-gray-100 cursor-not-allowed"
-                  }`}
-                />
-                {editingUsername ? (
-                  <button
-                    onClick={() => {
-                      handleUpdateProfile();
-                      setEditingUsername(false);
-                    }}
-                    className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded"
-                  >
-                    Save
-                  </button>
-                ) : (
-                  <FiEdit3
-                    className="w-5 h-5 text-gray-600 cursor-pointer hover:text-orange-500 transition"
-                    onClick={() => {
-                      setUsername("");
-                      setEditingUsername(true);
-                      setTimeout(() => usernameRef.current?.focus(), 0);
-                    }}
-                  />
-                )}
-              </div>
-            </div>
-
-            {/* Email Field */}
-            <div>
-              <label className="block text-gray-700 font-medium mb-1">Email</label>
-              <div className="flex items-center gap-2">
-                <input
-                  ref={emailRef}
-                  type="email"
-                  value={email}
-                  readOnly={!editingEmail}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className={`border p-2 rounded w-full ${
-                    editingEmail ? "bg-white" : "bg-gray-100 cursor-not-allowed"
-                  }`}
-                />
-                {editingEmail ? (
-                  <button
-                    onClick={() => {
-                      handleUpdateProfile();
-                      setEditingEmail(false);
-                    }}
-                    className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded"
-                  >
-                    Save
-                  </button>
-                ) : (
-                  <FiEdit3
-                    className="w-5 h-5 text-gray-600 cursor-pointer hover:text-orange-500 transition"
-                    onClick={() => {
-                      setEmail("");
-                      setEditingEmail(true);
-                      setTimeout(() => emailRef.current?.focus(), 0);
-                    }}
-                  />
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Change Password Button */}
-          <div className="flex justify-start mt-6">
-            <Button
-              variant="default"
-              onClick={() => setShowPasswordModal(true)}
-              className="bg-gray-700 hover:bg-gray-800 text-white py-3 px-5"
-            >
-              Change Password
-            </Button>
-          </div>
-        </div>
-
-        {/* Posts Section */}
-        <h3 className="text-2xl font-bold mb-4 text-gray-800 text-center md:text-left">
-          My Posts
-        </h3>
-
-        {/* Add new post */}
-        <div className="bg-white p-4 rounded-xl shadow mb-6">
-          <h4 className="text-lg font-semibold mb-3">Add New Post</h4>
-          <input
-            placeholder="Post title"
-            value={newPost.title}
-            onChange={(e) => setNewPost({ ...newPost, title: e.target.value })}
-            className="border p-2 rounded w-full mb-2"
-          />
-          <textarea
-            placeholder="Post content"
-            value={newPost.content}
-            onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
-            rows={5}
-            className="border p-2 rounded w-full mb-2 resize-none"
-          />
-          <button
-            onClick={handleCreatePost}
-            className="bg-orange-500 hover:bg-orange-600 text-white py-2 px-4 rounded"
-          >
-            Add Post
-          </button>
-        </div>
-
-        {/* Show posts */}
-        <div className="grid gap-4">
-          {user.posts.length > 0 ? (
-            user.posts.map((post) => (
-              <div key={post.id} className="bg-white p-4 rounded-lg shadow">
-                <h4 className="text-lg font-semibold text-orange-600">
-                  {post.title}
-                </h4>
-                <p className="text-gray-700 mt-2">{post.content}</p>
-                <button
-                  onClick={() => handleDeletePost(post.id)}
-                  className="mt-2 bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded"
-                >
-                  Delete
-                </button>
-              </div>
-            ))
-          ) : (
-            <p className="text-gray-600">No posts yet.</p>
-          )}
-        </div>
-      </main>
+          ))
+        ) : (
+          <p className="text-gray-600">No posts yet.</p>
+        )}
+      </div>
 
       {/* Password Modal */}
       {showPasswordModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 px-4 z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm px-4 z-50 transition-opacity animate-fadeIn">
+          <div className="bg-white shadow-[0_5px_15px_rgba(0,0,0,0.35)] p-6 rounded-lg w-full max-w-md">
             <h2 className="text-xl font-semibold mb-4 text-center">
               Change Password
             </h2>

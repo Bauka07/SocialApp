@@ -7,7 +7,7 @@ const Hero = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="flex flex-col items-center justify-center text-center py-20 md:py-35  px-4  rounded-2xl mt-6 shadow-[0_5px_15px_rgba(0,0,0,0.35)] bg-gray-50">
+    <div className="flex flex-col items-center justify-center text-center py-20 md:py-35  px-4  rounded-2xl mt-4 shadow-[0_5px_15px_rgba(0,0,0,0.35)] bg-gray-50">
       <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
         Welcome to <span className="text-orange-400">Social App</span>
       </h1>

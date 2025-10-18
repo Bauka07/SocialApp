@@ -1,5 +1,7 @@
+// client/src/pages/Contact.tsx
 import React, { useState } from 'react'
 import { toast } from "react-toastify"
+import axios from 'axios'
 
 const Contact: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -7,6 +9,7 @@ const Contact: React.FC = () => {
     email: "",
     message: "",
   });
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -15,11 +18,20 @@ const Contact: React.FC = () => {
     setFormData({ ...formData, [name]: value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Form submitted:", formData);
-    toast.success("Message sent!");
-    setFormData({ name: "", email: "", message: "" });
+    setLoading(true);
+
+    try {
+      const response = await axios.post('http://localhost:8080/api/contact', formData);
+      toast.success(response.data.message || "Message sent successfully! We'll get back to you soon.");
+      setFormData({ name: "", email: "", message: "" });
+    } catch (error: any) {
+      console.error('Contact Error:', error);
+      toast.error(error.response?.data?.error || "Failed to send message. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -45,6 +57,7 @@ const Contact: React.FC = () => {
             required
             placeholder="Enter your name"
             className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-400 outline-none"
+            disabled={loading}
           />
         </div>
 
@@ -61,6 +74,7 @@ const Contact: React.FC = () => {
             required
             placeholder="Enter your email"
             className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-400 outline-none"
+            disabled={loading}
           />
         </div>
 
@@ -75,16 +89,19 @@ const Contact: React.FC = () => {
             onChange={handleChange}
             required
             rows={5}
-            placeholder="Write your message..."
+            placeholder="Write your message... (minimum 10 characters)"
             className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-400 outline-none resize-none"
+            disabled={loading}
+            minLength={10}
           ></textarea>
         </div>
-        <div className=' text-center'>
+        <div className='text-center'>
           <button
-          type="submit"
-          className=" w-2/4 bg-orange-400 text-white font-semibold py-3 rounded-lg hover:bg-orange-500 transition"
-        >
-          Send Message
+            type="submit"
+            disabled={loading}
+            className="w-2/4 bg-orange-400 text-white font-semibold py-3 rounded-lg hover:bg-orange-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Sending...' : 'Send Message'}
           </button>
         </div>
       </form>

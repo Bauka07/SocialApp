@@ -13,7 +13,7 @@ import (
 
 func main() {
 	r := gin.Default()
-
+	// godotenv.Load()
 	// CORS
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:5173"},
@@ -23,12 +23,19 @@ func main() {
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
+
 	//Connect DB
 	database.ConnectDB()
-	err := database.DB.AutoMigrate(&models.User{}, &models.Post{})
+	err := database.DB.AutoMigrate(&models.User{}, &models.Post{}, &models.Contact{})
+	if err != nil {
+		fmt.Println("Migration error:", err)
+	} else {
+		fmt.Println("Database migrated successfully")
+	}
 	fmt.Println(err)
 	//Routes
 	routes.UserRoutes(r)
+	routes.ContactRoutes(r)
 
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "Server Running Successfully..."})
