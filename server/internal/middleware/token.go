@@ -9,19 +9,18 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// Struct for JWT
 type Claims struct {
+	UserID   string `json:"userID"`
 	Username string `json:"username"`
 	Email    string `json:"email"`
 	jwt.RegisteredClaims
 }
 
-// Creates Token
 func CreateToken(user models.User) (string, error) {
-
 	expirationTime := time.Now().Add(time.Minute * 10)
 
 	claims := &Claims{
+		UserID:   fmt.Sprintf("%d", user.ID),
 		Username: user.Username,
 		Email:    user.Email,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -32,9 +31,8 @@ func CreateToken(user models.User) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString(config.GetJWT())
-
 	if err != nil {
-		return "", fmt.Errorf("Can not create token: %w", err)
+		return "", fmt.Errorf("cannot create token: %w", err)
 	}
 
 	return tokenString, nil

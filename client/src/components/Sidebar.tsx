@@ -72,7 +72,7 @@ const Sidebar: React.FC = () => {
               onClick={toggleCollapse}
               className="hidden md:flex text-gray-400 hover:text-orange-400 transition"
             >
-              {collapsed ? <FiChevronRight /> : <FiChevronLeft />}
+              {collapsed ? <FiChevronRight className="text-2xl"/> : <FiChevronLeft className="text-2xl"/>}
             </button>
           </div>
 

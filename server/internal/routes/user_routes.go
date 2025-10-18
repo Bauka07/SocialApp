@@ -7,12 +7,10 @@ import (
 )
 
 func UserRoutes(r *gin.Engine) {
-	auth := r.Group("/users")
+	users := r.Group("/users")
 	{
-		auth.POST("/register", controllers.Register)
-		auth.POST("/login", controllers.Login)
-
-		// Protected routes
-		auth.GET("/dashboard", middleware.AuthCheck(), controllers.GetDashboard)
+		users.POST("/register", controllers.Register)
+		users.POST("/login", controllers.Login)
+		users.GET("/me", middleware.AuthCheck(), controllers.GetMyProfile)
 	}
 }

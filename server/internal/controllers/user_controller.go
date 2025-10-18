@@ -71,11 +71,25 @@ func Login(c *gin.Context) {
 	})
 }
 
-func GetDashboard(c *gin.Context) {
+func GetMyProfile(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	var user models.User
+	if err := database.DB.Preload("Posts").First(&user, userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":  "Welcome to your dashboard!",
-		"username": "HELLOW",
-		"email":    "hellow",
+		"user": gin.H{
+			"id":       user.ID,
+			"username": user.Username,
+			"email":    user.Email,
+			"posts":    user.Posts,
+		},
 	})
 }

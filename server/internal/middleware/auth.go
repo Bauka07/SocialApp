@@ -53,6 +53,7 @@ func AuthCheck() gin.HandlerFunc {
 
 		c.Set("username", claims.Username)
 		c.Set("email", claims.Email)
+		c.Set("userID", claims.UserID)
 
 		c.Next()
 	}

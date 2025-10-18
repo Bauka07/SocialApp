@@ -11,6 +11,7 @@ import { ToastContainer } from "react-toastify"
 import Footer from './components/Footer'
 import Dashboard from './pages/Dashboard'
 import ProtectedRoute from './components/ProtectedRoute'
+import Profile from './pages/Profile'
 
 const App = () => {
   const location = useLocation();
@@ -44,6 +45,15 @@ const App = () => {
               </ProtectedRoute>
             }
           />
+
+          <Route 
+            path='/profile'
+            element={
+              <ProtectedRoute>
+                <Profile/>
+              </ProtectedRoute>
+            }
+          /> 
         </Routes>
       </div>
 
