@@ -3,6 +3,7 @@ package controllers
 import (
 	"github.com/Bauka07/SocialApp/internal/database"
 	"github.com/Bauka07/SocialApp/internal/models"
+	"github.com/Bauka07/SocialApp/internal/services"
 	"github.com/gin-gonic/gin"
 )
 
@@ -12,7 +13,9 @@ func Register(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "Invalid Input!"})
 		return
 	}
-
+	if err := services.REH(req); err != nil {
+		c.JSON(400, err.Error())
+	}
 	user := models.User{Username: req.Username, Email: req.Email, Password: req.Password}
 	if err := database.DB.Create(&user).Error; err != nil {
 		c.JSON(400, gin.H{"error": "Could not create user"})
