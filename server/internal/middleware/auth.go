@@ -32,7 +32,7 @@ func AuthCheck() gin.HandlerFunc {
 			return
 		}
 
-		tokenString := tokenParts[1] // Token
+		tokenString := tokenParts[1]
 
 		claims := &Claims{}
 		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
