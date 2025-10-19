@@ -1,19 +1,12 @@
-# Root of your project
 root = "."
 tmp_dir = "tmp"
 
 [build]
-  cmd = "go build -o ./tmp/main.exe ."
-  bin = "tmp\\main.exe"
-
-  # 👇 Include all internal folders so Air watches them
-  include_dir = ["internal", "."]
-
-  # Watch all Go and HTML/template files
+  cmd = "go build -o ./tmp/main.exe ./cmd"
+  bin = "tmp/main.exe"
+  include_dir = ["cmd", "internal"]
   include_ext = ["go", "tpl", "tmpl", "html"]
-
-  # Ignore build outputs, vendor, etc.
-  exclude_dir = ["assets", "tmp", "vendor", "testdata"]
+  exclude_dir = ["tmp", "vendor", "assets", "testdata"]
   exclude_regex = ["_test.go"]
 
 [color]

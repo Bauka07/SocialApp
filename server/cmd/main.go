@@ -17,8 +17,14 @@ import (
 
 func main() {
 	// Load .env from parent directory
-	if err := godotenv.Load("../.env"); err != nil {
-		log.Println("Warning: .env file not found, relying on environment variables")
+	// Try to load .env from current directory
+	if err := godotenv.Load(".env"); err != nil {
+		// If not found, try one level up (for Air builds)
+		if err2 := godotenv.Load("../.env"); err2 != nil {
+			log.Println("Warning: .env file not found, relying on environment variables")
+		} else {
+			log.Println(".env file loaded successfully (from parent dir)")
+		}
 	} else {
 		log.Println(".env file loaded successfully")
 	}
