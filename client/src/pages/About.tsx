@@ -32,13 +32,13 @@ const About: React.FC = () => {
 
         {/* Social icons */}
         <div className="flex justify-center md:justify-start gap-5  text-2xl">
-          <Link to={"https://github.com/Bauka07"} target="_blank" rel="noopener noreferrer">
+          <Link to={"https://github.com"} target="_blank" rel="noopener noreferrer">
             <FaGithub className="text-gray-800 hover:text-black transition" />
           </Link>
-          <Link to={"https://linkedin.com/in/bauyrzhan-nurzhanov"} target="_blank" rel="noopener noreferrer">
+          <Link to={"https://linkedin.com"} target="_blank" rel="noopener noreferrer">
             <FaLinkedin className="text-blue-500 hover:text-blue-700 transition" />
           </Link>
-          <Link to={"https://t.me/@bauka_0203"} target="_blank" rel="noopener noreferrer">
+          <Link to={"https://google.com"} target="_blank" rel="noopener noreferrer">
             <FaTelegram className="text-blue-600 hover:text-blue-800 transition" />
           </Link>
         </div>
