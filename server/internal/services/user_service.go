@@ -18,7 +18,7 @@ func REH(user *models.User) error {
 		return fmt.Errorf("Password must be at least 6 characters")
 	}
 	if len(user.Username) < 3 || len(user.Username) > 30 {
-		return fmt.Errorf("Username is too short. It must be 6 and 30 characters")
+		return fmt.Errorf("Username is too short. It must be 3 and 30 characters")
 	}
 	if user.Email == "" {
 		return fmt.Errorf("Email is required")

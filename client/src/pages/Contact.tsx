@@ -89,7 +89,7 @@ const Contact: React.FC = () => {
             onChange={handleChange}
             required
             rows={5}
-            placeholder="Write your message... (minimum 10 characters)"
+            placeholder="Write your message... (minimum 3 characters)"
             className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-400 outline-none resize-none"
             disabled={loading}
             minLength={10}

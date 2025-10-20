@@ -34,6 +34,8 @@ const Profile: React.FC = () => {
   const token = localStorage.getItem("token");
   const [editingUsername, setEditingUsername] = useState(false);
   const [editingEmail, setEditingEmail] = useState(false);
+  const [profileImage, setProfileImage] = useState(null);
+  const [resumeFile, setResumeFile] = useState(null);
   const usernameRef = useRef<HTMLInputElement | null>(null);
   const emailRef = useRef<HTMLInputElement | null>(null);
 
@@ -202,18 +204,24 @@ const Profile: React.FC = () => {
           />
 
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-            <input
-              className="border px-3 py-2 rounded w-full sm:w-60 cursor-pointer"
-              type="file"
-              onChange={(e) =>
-                setSelectedImage(e.target.files ? e.target.files[0] : null)
-              }
-            />
+            {/* File picker */}
+            <label className="border px-3 py-2 rounded w-full sm:w-60 cursor-pointer italic font-light text-center">
+              {selectedImage ? selectedImage.name : "Choose File"}
+              <input
+                type="file"
+                className="hidden"
+                onChange={(e) =>
+                  setSelectedImage(e.target.files ? e.target.files[0] : null)
+                }
+              />
+            </label>
+
+            {/* Upload button */}
             <button
               onClick={handleImageUpload}
               className="bg-orange-500 hover:bg-orange-600 text-white py-2 px-4 rounded w-full sm:w-auto"
             >
-              Upload
+              {selectedImage ? "Upload Image" : "Upload"}
             </button>
           </div>
         </div>
