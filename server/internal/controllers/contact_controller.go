@@ -19,7 +19,7 @@ func ContactHandler(c *gin.Context) {
 	}
 
 	if len(contact.Message) < 3 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Message must be at least 10 characters"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Message must be at least 4 characters"})
 		return
 	}
 

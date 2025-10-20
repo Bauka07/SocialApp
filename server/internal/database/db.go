@@ -3,6 +3,7 @@ package database
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -11,7 +12,7 @@ import (
 var DB *gorm.DB
 
 func ConnectDB() {
-	dsn := "postgresql://admin:r6CE8362jHPGblokTzsRrHDeehOe7gq6@dpg-d3p6ah15pdvs73adnj40-a.frankfurt-postgres.render.com/socapp"
+	dsn := os.Getenv("DSN")
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
