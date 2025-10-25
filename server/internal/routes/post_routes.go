@@ -9,15 +9,15 @@ import (
 func PostRoutes(r *gin.Engine) {
 	posts := r.Group("/posts")
 	{
-		// Protected routes (require authentication) - Put specific routes FIRST
-		posts.GET("/my-posts", middleware.AuthCheck(), controllers.GetMyPosts)               // Get my posts
-		posts.POST("", middleware.AuthCheck(), controllers.CreatePost)                       // Create post
-		posts.PUT("/:id", middleware.AuthCheck(), controllers.UpdatePost)                    // Update post
-		posts.DELETE("/:id", middleware.AuthCheck(), controllers.DeletePost)                 // Delete post
-		posts.POST("/:id/upload-image", middleware.AuthCheck(), controllers.UploadPostImage) // Upload post image
-
-		// Public routes - Put generic /:id route LAST to avoid conflicts
+		// Public routes FIRST
+		posts.GET("", controllers.GetPosts)        // Get all posts ✅
 		posts.GET("/:id", controllers.GetPostByID) // Get single post
-		posts.GET("/", controllers.GetPosts)
+
+		// Protected routes
+		posts.GET("/my-posts", middleware.AuthCheck(), controllers.GetMyPosts)
+		posts.POST("", middleware.AuthCheck(), controllers.CreatePost)
+		posts.PUT("/:id", middleware.AuthCheck(), controllers.UpdatePost)
+		posts.DELETE("/:id", middleware.AuthCheck(), controllers.DeletePost)
+		posts.POST("/:id/upload-image", middleware.AuthCheck(), controllers.UploadPostImage)
 	}
 }

@@ -52,6 +52,25 @@ func CreatePost(userID uint, title, content string) (*models.Post, error) {
 	return &post, nil
 }
 
+// GetAllPosts gets all posts from all users (for dashboard feed)
+func GetAllPosts() ([]models.Post, error) {
+	var posts []models.Post
+
+	if err := database.DB.
+		Preload("User").
+		Order("created_at DESC").
+		Find(&posts).Error; err != nil {
+		return nil, errors.New("failed to fetch posts")
+	}
+
+	// Clear passwords from user data
+	for i := range posts {
+		posts[i].User.Password = ""
+	}
+
+	return posts, nil
+}
+
 // GetUserPosts gets all posts by a user
 func GetUserPosts(userID uint) ([]models.Post, error) {
 	var posts []models.Post
