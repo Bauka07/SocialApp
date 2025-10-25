@@ -182,5 +182,4 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
     </div>
   )
 }
-
 export default Register
