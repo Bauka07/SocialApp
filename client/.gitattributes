@@ -1,0 +1,4 @@
+# Force React highlighting
+*.tsx linguist-language=TSX
+*.jsx linguist-language=JSX
+*.json linguist-language=JSON
