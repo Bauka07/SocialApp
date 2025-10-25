@@ -18,5 +18,6 @@ func PostRoutes(r *gin.Engine) {
 
 		// Public routes - Put generic /:id route LAST to avoid conflicts
 		posts.GET("/:id", controllers.GetPostByID) // Get single post
+		posts.GET("/", controllers.GetPosts)
 	}
 }

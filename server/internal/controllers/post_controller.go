@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/Bauka07/SocialApp/internal/database"
+	"github.com/Bauka07/SocialApp/internal/models"
 	"github.com/Bauka07/SocialApp/internal/services"
 	"github.com/gin-gonic/gin"
 )
@@ -131,6 +133,19 @@ func GetPostByID(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"post": post,
+	})
+}
+
+func GetPosts(c *gin.Context) {
+	var posts []models.Post
+
+	if err := database.DB.Find(&posts).Error; err != nil {
+		c.JSON(400, gin.H{"error": "Failed to fetch posts"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"posts": posts,
 	})
 }
 
