@@ -31,6 +31,7 @@ func main() {
 
 	// Initialize configuration (JWT, etc.)
 	config.InitConfig()
+	config.InitCloudinary()
 
 	// Initialize Gin
 	r := gin.Default()
@@ -47,7 +48,7 @@ func main() {
 
 	// Connect to the database
 	database.ConnectDB()
-	if err := database.DB.AutoMigrate(&models.User{}, &models.Contact{}); err != nil {
+	if err := database.DB.AutoMigrate(&models.User{}, &models.Contact{}, &models.Post{}); err != nil {
 		fmt.Println("Migration error:", err)
 	} else {
 		fmt.Println("Database migrated successfully")
@@ -56,6 +57,7 @@ func main() {
 	// Routes
 	routes.UserRoutes(r)
 	routes.ContactRoutes(r)
+	routes.PostRoutes(r)
 
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "Server Running Successfully..."})

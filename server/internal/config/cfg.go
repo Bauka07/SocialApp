@@ -3,6 +3,8 @@ package config
 import (
 	"log"
 	"os"
+
+	"github.com/cloudinary/cloudinary-go/v2"
 )
 
 var JWTSecret []byte
@@ -21,4 +23,21 @@ func InitConfig() {
 // GetJWT returns the JWT secret key
 func GetJWT() []byte {
 	return JWTSecret
+}
+
+var Cloud *cloudinary.Cloudinary
+
+func InitCloudinary() {
+	url := os.Getenv("CLOUDINARY_URL")
+	if url == "" {
+		log.Fatal("❌ CLOUDINARY_URL not found in .env")
+	}
+
+	cld, err := cloudinary.NewFromURL(url)
+	if err != nil {
+		log.Fatalf("❌ Failed to connect to Cloudinary: %v", err)
+	}
+
+	Cloud = cld
+	log.Println("✅ Cloudinary connected successfully")
 }
