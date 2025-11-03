@@ -63,11 +63,11 @@ const Profile: React.FC = () => {
 
     const fetchUserData = async () => {
       try {
-        const userRes = await axios.get("http://localhost:8080/users/me", {
+        const userRes = await axios.get("http://26.176.162.130:8080/users/me", {
           headers: { Authorization: `Bearer ${token}` },
         });
         
-        const postsRes = await axios.get("http://localhost:8080/posts/my-posts", {
+        const postsRes = await axios.get("http://26.176.162.130:8080/posts/my-posts", {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -112,7 +112,7 @@ const Profile: React.FC = () => {
       }
 
       const res = await axios.put(
-        "http://localhost:8080/users/update",
+        "http://26.176.162.130:8080/users/update",
         updatedData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -184,7 +184,7 @@ const Profile: React.FC = () => {
 
     try {
       const res = await axios.post(
-        "http://localhost:8080/users/upload-image",
+        "http://26.176.162.130:8080/users/upload-image",
         formData,
         {
           headers: {
@@ -255,7 +255,7 @@ const Profile: React.FC = () => {
 
     try {
       await axios.put(
-        "http://localhost:8080/users/password",
+        "http://26.176.162.130:8080/users/password",
         {
           old_password: oldPassword,
           new_password: newPassword,
@@ -322,7 +322,7 @@ const Profile: React.FC = () => {
 
     try {
       const res = await axios.post(
-        `http://localhost:8080/posts/${postId}/upload-image`,
+        `http://26.176.162.130:8080/posts/${postId}/upload-image`,
         formData,
         {
           headers: {
@@ -417,7 +417,7 @@ const handleCreatePost = async () => {
     }
 
     const res = await axios.post(
-      "http://localhost:8080/posts",
+      "http://26.176.162.130:8080/posts",
       formData,
       { 
         headers: { 
@@ -465,7 +465,7 @@ const handleCreatePost = async () => {
 
     try {
       const res = await axios.put(
-        `http://localhost:8080/posts/${postId}`,
+        `http://26.176.162.130:8080/posts/${postId}`,
         editPostData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -497,7 +497,7 @@ const handleCreatePost = async () => {
     if (!confirm("Are you sure you want to delete this post?")) return;
 
     try {
-      await axios.delete(`http://localhost:8080/posts/${id}`, {
+      await axios.delete(`http://26.176.162.130:8080/posts/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       toast.success("Post deleted");

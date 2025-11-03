@@ -1,0 +1,65 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+README.md
+LICENSE
+*.md
+
+# Environment files (copy explicitly if needed)
+.env
+.env.*
+
+# Build artifacts
+tmp/
+cmd/tmp/
+*.exe
+*.log
+main
+/bin
+
+# Air live reload config
+.air.toml
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker files (no need to copy these into the image)
+Dockerfile
+.dockerignore
+docker-compose.yml
+docker-compose.*.yml
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.travis.yml
+
+# Tests (optional - remove if you want to run tests in Docker)
+*_test.go
+
+# Coverage reports
+coverage.txt
+coverage.html
+*.out
+
+# Vendor (will be downloaded during build)
+vendor/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+logs/

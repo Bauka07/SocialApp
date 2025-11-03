@@ -71,7 +71,7 @@ const Login: React.FC = () => {
 
     try {
       const response = await axios.post<LoginResponse>(
-        "http://localhost:8080/users/login",
+        "http://26.176.162.130:8080/users/login",
         formData,
         {
           headers: { "Content-Type": "application/json" },

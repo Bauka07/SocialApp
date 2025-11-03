@@ -246,7 +246,7 @@ func UpdatePassword(c *gin.Context) {
 	var req struct {
 		OldPassword        string `json:"old_password"`
 		NewPassword        string `json:"new_password"`
-		ConfirmNewPassword string `json:"confirm_new_password"` // Added
+		ConfirmNewPassword string `json:"confirm_new_password"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {

@@ -86,7 +86,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> 
 
   try {
     const response = await axios.post<RegisterResponse>(
-      "http://localhost:8080/users/register",
+      "http://26.176.162.130:8080/users/register",
       formData,
       {
         headers: { "Content-Type": "application/json" },
