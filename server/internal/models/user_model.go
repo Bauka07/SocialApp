@@ -1,11 +1,21 @@
 package models
 
-import "gorm.io/gorm"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
 
 type User struct {
-	gorm.Model
-	Username string `json:"username" gorm:"uniqueIndex;not null"`
-	Email    string `json:"email" gorm:"uniqueIndex;not null"`
-	Password string `json:"password" gorm:"not null"`
-	Posts    []Post `json:"posts" gorm:"foreignKey:UserID"`
+	ID        uint           `json:"id" gorm:"primarykey"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	DeletedAt gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
+
+	Username string `json:"username" gorm:"unique;not null;size:30"`
+	Email    string `json:"email" gorm:"unique;not null"`
+	Password string `json:"password,omitempty" gorm:"not null"`
+	ImageURL string `json:"image_url,omitempty" gorm:"size:255"`
+
+	Posts []Post `json:"posts,omitempty" gorm:"foreignKey:UserID"`
 }

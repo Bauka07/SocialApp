@@ -56,30 +56,53 @@ const Register: React.FC = () => {
     }))
   }
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
+const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
+  e.preventDefault()
+  setLoading(true)
+  setError(null)
 
-    try {
-      const response = await axios.post<RegisterResponse>(
-        "http://localhost:8080/users/register",
-        formData,
-        {
-          headers: { "Content-Type": "application/json" },
-        }
-      )
-      const { token, error, user } = response.data
-      localStorage.setItem("token", token)
-      toast.success("Logged in successfully!")
-      navigate("/dashboard")
-    } catch (err) {
-      const error = err as AxiosError<ApiError>
-      setError(error.response?.data?.error || "Something went wrong.")
-    } finally {
-      setLoading(false)
-    }
+  // Frontend validation for better UX
+  if (formData.password.length < 8) {
+    setError("Password must be at least 8 characters")
+    setLoading(false)
+    return
   }
+
+  if (formData.password.length > 72) {
+    setError("Password must not exceed 72 characters")
+    setLoading(false)
+    return
+  }
+
+  const hasUpper = /[A-Z]/.test(formData.password)
+  const hasLower = /[a-z]/.test(formData.password)
+  const hasDigit = /[0-9]/.test(formData.password)
+
+  if (!hasUpper || !hasLower || !hasDigit) {
+    setError("Password must contain uppercase, lowercase, and numbers")
+    setLoading(false)
+    return
+  }
+
+  try {
+    const response = await axios.post<RegisterResponse>(
+      "http://localhost:8080/users/register",
+      formData,
+      {
+        headers: { "Content-Type": "application/json" },
+      }
+    )
+    const { token } = response.data
+    localStorage.setItem("token", token)
+    toast.success("Account created successfully!")
+    navigate("/dashboard")
+  } catch (err) {
+    const error = err as AxiosError<ApiError>
+    setError(error.response?.data?.error || "Something went wrong.")
+  } finally {
+    setLoading(false)
+  }
+}
 
   return (
     <div className='flex items-center justify-center h-screen w-full'>
@@ -117,9 +140,23 @@ const Register: React.FC = () => {
                 <Input
                   id="password"
                   type="password"
+                  placeholder="Min 8 chars with uppercase, lowercase, numbers"
                   required
                   onChange={handleChange}
+                  value={formData.password}
                 />
+                {/* Real-time password strength indicator */}
+                {formData.password && (
+                  <p className="text-xs mt-1">
+                    {formData.password.length >= 8 && 
+                    /[A-Z]/.test(formData.password) && 
+                    /[a-z]/.test(formData.password) && 
+                    /[0-9]/.test(formData.password)
+                      ? <span className="text-green-600">✓ Strong password</span>
+                      : <span className="text-amber-600">⚠ Needs: 8+ chars, uppercase, lowercase, number</span>
+                    }
+                  </p>
+                )}
               </div>
 
               {error && <p className="text-red-500 text-sm">{error}</p>}
@@ -145,5 +182,4 @@ const Register: React.FC = () => {
     </div>
   )
 }
-
 export default Register

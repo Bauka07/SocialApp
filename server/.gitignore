@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Binaries for programs and plugins
 *.exe
 *.exe~
@@ -56,3 +57,6 @@ logs/
 
 # Docker volumes and data
 docker-data/
+=======
+".env" 
+>>>>>>> 72a3804a0533f3f293f8eac2510fe8158fea726c
