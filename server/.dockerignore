@@ -8,9 +8,6 @@ README.md
 LICENSE
 *.md
 
-# Environment files (copy explicitly if needed)
-.env
-.env.*
 
 # Build artifacts
 tmp/

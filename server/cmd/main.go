@@ -36,19 +36,30 @@ func main() {
 	// Initialize Gin
 	r := gin.Default()
 
-	// CORS configuration
-	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:7777", "http://192.168.1.72:7777", "http://26.176.162.130:7777"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		ExposeHeaders:    []string{"Content-Length"},
+	// CORS configuration - ALWAYS allow all origins in development
+	corsConfig := cors.Config{
+		AllowAllOrigins:  true,
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With"},
+		ExposeHeaders:    []string{"Content-Length", "Content-Type"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
-	}))
+	}
+
+	r.Use(cors.New(corsConfig))
+
+	log.Println("✅ CORS enabled for all origins")
 
 	// Connect to the database
 	database.ConnectDB()
-	if err := database.DB.AutoMigrate(&models.User{}, &models.Contact{}, &models.Post{}); err != nil {
+
+	// IMPORTANT: Include Message model in AutoMigrate
+	if err := database.DB.AutoMigrate(
+		&models.User{},
+		&models.Contact{},
+		&models.Post{},
+		&models.Message{}, // Added Message model
+	); err != nil {
 		fmt.Println("Migration error:", err)
 	} else {
 		fmt.Println("Database migrated successfully")
@@ -58,6 +69,7 @@ func main() {
 	routes.UserRoutes(r)
 	routes.ContactRoutes(r)
 	routes.PostRoutes(r)
+	routes.ChatRoutes(r)
 
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "Server Running Successfully..."})
@@ -68,5 +80,13 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
-	r.Run(":" + port)
+
+	// Listen on all interfaces (0.0.0.0) to allow external connections
+	log.Printf("🚀 Server starting on 0.0.0.0:%s...", port)
+	log.Printf("📍 Access via:")
+	log.Printf("   - http://localhost:%s", port)
+	log.Printf("   - http://127.0.0.1:%s", port)
+	log.Printf("   - http://26.176.162.130:%s (if this is your IP)", port)
+
+	r.Run("0.0.0.0:" + port)
 }
