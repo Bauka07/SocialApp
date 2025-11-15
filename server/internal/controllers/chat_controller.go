@@ -104,7 +104,9 @@ func GetChats(c *gin.Context) {
 	}
 
 	var messages []models.Message
-	if err := database.DB.Where("sender_id = ? OR receiver_id = ?", userID, userID).
+	if err := database.DB.
+		Preload("ReplyTo").
+		Where("sender_id = ? OR receiver_id = ?", userID, userID).
 		Order("created_at DESC").
 		Find(&messages).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch chats"})
@@ -114,7 +116,6 @@ func GetChats(c *gin.Context) {
 	chatsMap := make(map[uint]*ChatResponse)
 
 	for _, msg := range messages {
-		// FIXED: Skip messages that are deleted for current user
 		if msg.SenderID == userID && msg.DeletedForSender {
 			continue
 		}
@@ -329,10 +330,11 @@ func GetMessages(c *gin.Context) {
 	}
 
 	var messages []models.Message
-	if err := database.DB.Where(
-		"(sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)",
-		userID, otherUserID, otherUserID, userID,
-	).Order("created_at ASC").Find(&messages).Error; err != nil {
+	if err := database.DB.Preload("ReplyTo").
+		Where(
+			"(sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)",
+			userID, otherUserID, otherUserID, userID,
+		).Order("created_at ASC").Find(&messages).Error; err != nil {
 		log.Printf("Error fetching messages: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch messages"})
 		return

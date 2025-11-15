@@ -649,6 +649,12 @@ const Chat: React.FC = () => {
     setShowChatDeleteModal(false);
     setChatToDelete(null);
   };
+  const isReplyDeleted = (replyMsg: Message) => {
+    if (!currentUser) return true;
+    if (replyMsg.sender_id === currentUser.id && replyMsg.deleted_for_sender) return true;
+    if (replyMsg.receiver_id === currentUser.id && replyMsg.deleted_for_receiver) return true;
+    return false;
+  };
 
   const handleEditMessage = (message: Message) => {
     setEditingMessage(message);
@@ -889,7 +895,7 @@ const Chat: React.FC = () => {
                             : "bg-white text-gray-900 border border-gray-200"
                         }`}
                       >
-                        {message.reply_to && (
+                        {message.reply_to && !isReplyDeleted(message.reply_to) && (
                           <div className={`mb-2 pb-2 border-l-2 pl-2 text-xs ${
                             isOwn ? "border-orange-300" : "border-gray-300"
                           }`}>
