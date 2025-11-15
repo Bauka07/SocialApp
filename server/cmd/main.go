@@ -58,7 +58,10 @@ func main() {
 		&models.User{},
 		&models.Contact{},
 		&models.Post{},
-		&models.Message{}, // Added Message model
+		&models.Message{},
+		&models.Like{},
+		&models.Comment{},
+		&models.PostWithStats{},
 	); err != nil {
 		fmt.Println("Migration error:", err)
 	} else {

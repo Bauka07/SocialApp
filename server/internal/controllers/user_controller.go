@@ -55,6 +55,7 @@ func Login(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "Invalid Input!"})
 		return
 	}
+
 	user, err := services.LEH(&req)
 	if err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
@@ -240,6 +241,13 @@ func UpdatePassword(c *gin.Context) {
 	userID, err := strconv.ParseUint(userIDStr, 10, 32)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user ID"})
+		return
+	}
+
+	// ✅ NEW: Check if this is an OAuth user (they can't change password)
+	var user models.User
+	if err := database.DB.First(&user, userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 		return
 	}
 

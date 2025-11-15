@@ -3,7 +3,7 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { FiEdit3, FiUser, FiMail, FiLock, FiImage, FiTrash2, FiEdit2, FiX, FiUpload, FiCamera, FiPlus } from "react-icons/fi";
+import { FiEdit3, FiUser, FiMail, FiLock, FiImage, FiTrash2, FiEdit2, FiX, FiUpload, FiCamera, FiPlus, FiHeart, FiMoreVertical, FiMessageCircle, FiSend, FiShare2 } from "react-icons/fi";
 import Footer from "@/components/Footer";
 
 interface Post {
@@ -13,6 +13,14 @@ interface Post {
   image_url?: string;
   created_at: string;
   updated_at?: string;
+  likes_count?: number;
+  comments_count?: number;
+  user?: {
+    id: number;
+    username: string;
+    email: string;
+    image_url?: string;
+  };
 }
 
 interface User {
@@ -23,10 +31,26 @@ interface User {
   posts: Post[];
 }
 
+type Comment = {
+  id: number;
+  content: string;
+  created_at: string;
+  user_id: number; // Added missing field
+  user: {
+    id: number;
+    username: string;
+    image_url?: string;
+  };
+};
+
 const Profile: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"posts" | "create">("posts");
+  const [activeTab, setActiveTab] = useState<"posts" | "create" | "liked">("posts");
+  const [likedPosts, setLikedPosts] = useState<Post[]>([]);
+  const [showPostMenu, setShowPostMenu] = useState<number | null>(null);
+  const [showCommentsModal, setShowCommentsModal] = useState<number | null>(null);
+  const [postComments, setPostComments] = useState<Comment[]>([]);
   
   // Post states
   const [editingPost, setEditingPost] = useState<number | null>(null);
@@ -41,6 +65,16 @@ const Profile: React.FC = () => {
   const [newPostImage, setNewPostImage] = useState<File | null>(null);
   const [newPostImagePreview, setNewPostImagePreview] = useState<string | null>(null);
   const [creatingPost, setCreatingPost] = useState(false);
+
+  const [likedPostComments, setLikedPostComments] = useState<{ [key: number]: Comment[] }>({});
+  const [showLikedPostComments, setShowLikedPostComments] = useState<{ [key: number]: boolean }>({});
+  const [likedPostCommentText, setLikedPostCommentText] = useState("");
+  const [commentingOnLikedPost, setCommentingOnLikedPost] = useState<number | null>(null);
+  const [showShareModal, setShowShareModal] = useState<number | null>(null);
+  const [showLikesModal, setShowLikesModal] = useState<number | null>(null);
+  const [postLikes, setPostLikes] = useState<any[]>([]);
+  const [editingLikedCommentId, setEditingLikedCommentId] = useState<number | null>(null);
+  const [editLikedCommentText, setEditLikedCommentText] = useState("");
   
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
@@ -69,7 +103,7 @@ const Profile: React.FC = () => {
           posts: postsRes.data.posts || []
         });
 
-        console.log("User data loaded:", userData); // Debug log
+        console.log("User data loaded:", userData);
       } catch (err) {
         console.error("Profile load error:", err);
         toast.error("Failed to load profile");
@@ -81,6 +115,53 @@ const Profile: React.FC = () => {
     fetchUserData();
   }, [token, navigate]);
 
+  const fetchPostLikes = async (postId: number) => {
+    if (!token) return;
+    
+    try {
+      const res = await axios.get(`http://26.176.162.130:8080/posts/${postId}/likes`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setPostLikes(res.data.likes || []);
+    } catch (err) {
+      console.error("Failed to fetch likes:", err);
+    }
+  };
+
+  const fetchLikedPosts = async () => {
+    if (!token) return;
+    
+    try {
+      const res = await axios.get("http://26.176.162.130:8080/posts/liked/my-likes", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setLikedPosts(res.data.posts || []);
+    } catch (err) {
+      console.error("Failed to fetch liked posts:", err);
+      toast.error("Failed to load liked posts");
+    }
+  };
+
+  const fetchPostComments = async (postId: number) => {
+    if (!token) return;
+    
+    try {
+      const res = await axios.get(`http://26.176.162.130:8080/posts/${postId}/comments`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setPostComments(res.data.comments || []);
+    } catch (err) {
+      console.error("Failed to fetch comments:", err);
+      toast.error("Failed to load comments");
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "liked") {
+      fetchLikedPosts();
+    }
+  }, [activeTab, token]);
+
   const handleNewPostImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -91,12 +172,179 @@ const Profile: React.FC = () => {
       return;
     }
 
+    const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Only JPG, PNG, and WEBP images are allowed");
+      e.target.value = "";
+      return;
+    }
+
     setNewPostImage(file);
     const reader = new FileReader();
     reader.onloadend = () => {
       setNewPostImagePreview(reader.result as string);
     };
     reader.readAsDataURL(file);
+  };
+
+  const toggleLikeOnLikedPost = async (postId: number) => {
+    if (!token) return;
+
+    try {
+      const res = await axios.post(
+        `http://26.176.162.130:8080/posts/${postId}/like`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // If unliked, remove from liked posts
+      if (!res.data.liked) {
+        setLikedPosts((prev) => prev.filter((p) => p.id !== postId));
+        toast.success("Removed from liked posts");
+      } else {
+        // Update like count
+        setLikedPosts((prev) =>
+          prev.map((post) =>
+            post.id === postId
+              ? { ...post, likes_count: (post.likes_count || 0) + 1 }
+              : post
+          )
+        );
+      }
+    } catch (err) {
+      console.error("Like error:", err);
+      toast.error("Failed to update like");
+    }
+  };
+
+  const fetchLikedPostComments = async (postId: number) => {
+    if (!token) return;
+
+    try {
+      const res = await axios.get(
+        `http://26.176.162.130:8080/posts/${postId}/comments`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setLikedPostComments((prev) => ({
+        ...prev,
+        [postId]: res.data.comments || [],
+      }));
+    } catch (err) {
+      console.error("Fetch comments error:", err);
+      toast.error("Failed to load comments");
+    }
+  };
+
+  const toggleLikedPostComments = async (postId: number) => {
+    if (!showLikedPostComments[postId]) {
+      await fetchLikedPostComments(postId);
+    }
+    setShowLikedPostComments((prev) => ({ ...prev, [postId]: !prev[postId] }));
+  };
+
+  const handleLikedPostCommentSubmit = async (postId: number) => {
+    if (!token || !likedPostCommentText.trim()) return;
+
+    try {
+      const res = await axios.post(
+        `http://26.176.162.130:8080/posts/${postId}/comments`,
+        { content: likedPostCommentText },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setLikedPostComments((prev) => ({
+        ...prev,
+        [postId]: [res.data.comment, ...(prev[postId] || [])],
+      }));
+
+      setLikedPosts((prev) =>
+        prev.map((post) =>
+          post.id === postId
+            ? { ...post, comments_count: (post.comments_count || 0) + 1 }
+            : post
+        )
+      );
+
+      setLikedPostCommentText("");
+      setCommentingOnLikedPost(null);
+      toast.success("Comment added!");
+    } catch (err) {
+      console.error("Comment error:", err);
+      toast.error("Failed to add comment");
+    }
+  };
+
+  
+
+  const handleDeleteLikedPostComment = async (commentId: number, postId: number) => {
+    if (!token) return;
+    if (!confirm("Delete this comment?")) return;
+
+    try {
+      await axios.delete(`http://26.176.162.130:8080/comments/${commentId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setLikedPostComments((prev) => ({
+        ...prev,
+        [postId]: prev[postId]?.filter((c) => c.id !== commentId) || [],
+      }));
+
+      setLikedPosts((prev) =>
+        prev.map((post) =>
+          post.id === postId
+            ? { ...post, comments_count: Math.max(0, (post.comments_count || 1) - 1) }
+            : post
+        )
+      );
+
+      toast.success("Comment deleted");
+    } catch (err) {
+      console.error("Delete comment error:", err);
+      toast.error("Failed to delete comment");
+    }
+  };
+
+  const handleEditLikedPostComment = (commentId: number, currentContent: string) => {
+    setEditingLikedCommentId(commentId);
+    setEditLikedCommentText(currentContent);
+  };
+  const handleUpdateLikedPostComment = async (commentId: number, postId: number) => {
+    if (!token || !editLikedCommentText.trim()) return;
+
+    try {
+      const res = await axios.put(
+        `http://26.176.162.130:8080/comments/${commentId}`,
+        { content: editLikedCommentText },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setLikedPostComments((prev) => ({
+        ...prev,
+        [postId]: (prev[postId] || []).map((c) =>
+          c.id === commentId ? { ...c, content: res.data.comment.content } : c
+        ),
+      }));
+
+      setEditingLikedCommentId(null);
+      setEditLikedCommentText("");
+      toast.success("Comment updated!");
+    } catch (err) {
+      console.error("Update comment error:", err);
+      toast.error("Failed to update comment");
+    }
+  };
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (seconds < 60) return "just now";
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
   const handlePostImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -131,7 +379,7 @@ const Profile: React.FC = () => {
       return;
     }
 
-    if (uploadingPostId) return;
+    if (uploadingPostId || !token) return;
 
     const formData = new FormData();
     formData.append("image", selectedPostImage);
@@ -182,6 +430,8 @@ const Profile: React.FC = () => {
       return;
     }
 
+    if (!token) return;
+
     setCreatingPost(true);
 
     try {
@@ -231,6 +481,7 @@ const Profile: React.FC = () => {
   const handleStartEdit = (post: Post) => {
     setEditingPost(post.id);
     setEditPostData({ title: post.title, content: post.content });
+    setShowPostMenu(null);
   };
 
   const handleUpdatePost = async (postId: number) => {
@@ -238,6 +489,8 @@ const Profile: React.FC = () => {
       toast.warn("Title and content are required");
       return;
     }
+
+    if (!token) return;
 
     try {
       const res = await axios.put(
@@ -271,6 +524,8 @@ const Profile: React.FC = () => {
   const handleDeletePost = async (id: number) => {
     if (!confirm("Are you sure you want to delete this post?")) return;
 
+    if (!token) return;
+
     try {
       await axios.delete(`http://26.176.162.130:8080/posts/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -279,6 +534,7 @@ const Profile: React.FC = () => {
       setUser((prev) =>
         prev ? { ...prev, posts: prev.posts.filter((p) => p.id !== id) } : prev
       );
+      setShowPostMenu(null);
     } catch (err: any) {
       console.error("Delete post error:", err);
       toast.error("Failed to delete post");
@@ -303,26 +559,19 @@ const Profile: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-orange-50/20 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Profile Header - Modern Clean Design */}
+        {/* Profile Header */}
         <div className="mb-8 bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100">
-          {/* Modern Clean Banner with Blur Effect */}
           <div className="h-48 md:h-56 relative overflow-hidden bg-gradient-to-br from-white via-orange-50 to-purple-50">
-            {/* Blur circles for depth */}
             <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-orange-300/30 to-pink-300/30 rounded-full blur-3xl"></div>
             <div className="absolute bottom-0 left-0 w-80 h-80 bg-gradient-to-tr from-purple-300/30 to-blue-300/30 rounded-full blur-3xl"></div>
-            
-            {/* Subtle pattern overlay */}
             <div className="absolute inset-0 opacity-5" style={{
-              backgroundImage: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23000000" fill-opacity="1"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+              backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\\"60\\" height=\\"60\\" viewBox=\\"0 0 60 60\\" xmlns=\\"http://www.w3.org/2000/svg\\"%3E%3Cg fill=\\"none\\" fill-rule=\\"evenodd\\"%3E%3Cg fill=\\"%23000000\\" fill-opacity=\\"1\\"%3E%3Cpath d=\\"M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
             }}></div>
-
-            {/* Soft gradient overlay */}
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/10 to-white/50"></div>
           </div>
           
           <div className="px-6 md:px-10 pb-8 relative z-20">
             <div className="flex flex-col md:flex-row md:items-end gap-6 -mt-20 md:-mt-24">
-              {/* Profile Picture - ROUNDED */}
               <div className="relative group z-30">
                 <div className="w-26 h-26 md:w-30 md:h-30 rounded-full border-6 border-white shadow-2xl bg-white overflow-hidden ring-4 ring-orange-100">
                   {user.image_url ? (
@@ -339,12 +588,9 @@ const Profile: React.FC = () => {
                     </div>
                   )}
                 </div>
-                
-                {/* Online status indicator */}
                 <div className="absolute bottom-2 right-2 w-8 h-8 bg-green-500 border-4 border-white rounded-full shadow-lg"></div>
               </div>
 
-              {/* User Info - WITH USERNAME AND EMAIL */}
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
@@ -352,7 +598,6 @@ const Profile: React.FC = () => {
                   </h1>
                 </div>
                 
-                {/* Stats - POST COUNT */}
                 <div className="flex gap-6 mb-4">
                   <div className="bg-gradient-to-br from-orange-50 to-orange-100 px-6 py-3 rounded-2xl border-2 border-orange-200 shadow-md">
                     <div className="flex items-center gap-3">
@@ -388,13 +633,26 @@ const Profile: React.FC = () => {
             }`}
           >
             <FiImage className="w-5 h-5" />
-            <span>My Content</span>
+            <span>My Posts</span>
             <span className={`px-3 py-1 rounded-full text-sm font-bold ${
               activeTab === "posts" ? "bg-white/20" : "bg-orange-100 text-orange-600"
             }`}>
               {user.posts.length}
             </span>
           </button>
+          
+          <button
+            onClick={() => setActiveTab("liked")}
+            className={`flex-1 md:flex-initial py-4 px-8 rounded-xl font-bold transition-all flex items-center justify-center gap-3 ${
+              activeTab === "liked"
+                ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg scale-105"
+                : "text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            <FiHeart className="w-5 h-5" />
+            <span>Liked</span>
+          </button>
+          
           <button
             onClick={() => setActiveTab("create")}
             className={`flex-1 md:flex-initial py-4 px-8 rounded-xl font-bold transition-all flex items-center justify-center gap-3 ${
@@ -404,11 +662,11 @@ const Profile: React.FC = () => {
             }`}
           >
             <FiPlus className="w-5 h-5" />
-            <span>New Post</span>
+            <span>Create</span>
           </button>
         </div>
 
-        {/* Create Post Tab - MODERN ORANGE DESIGN */}
+        {/* Create Post Tab */}
         {activeTab === "create" && (
           <div className="max-w-5xl mx-auto">
             {/* Modern Header with Stats */}
@@ -662,7 +920,7 @@ const Profile: React.FC = () => {
             {user.posts && user.posts.length > 0 ? (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {user.posts.map((post) => (
-                  <div key={post.id} className="bg-white rounded-2xl shadow-xl overflow-hidden hover:shadow-2xl transition-all group border border-gray-100">
+                  <div key={post.id} className="bg-white rounded-2xl shadow-xl overflow-hidden hover:shadow-2xl transition-all group border border-gray-100 relative">
                     {editingPost === post.id ? (
                       <div className="p-6">
                         <input
@@ -705,6 +963,71 @@ const Profile: React.FC = () => {
                       </div>
                     ) : (
                       <>
+                        {/* Three Dot Menu */}
+                        <div className="absolute top-3 right-3 z-20">
+                          <button
+                            onClick={() => setShowPostMenu(showPostMenu === post.id ? null : post.id)}
+                            className="bg-white/90 hover:bg-white p-2 rounded-full shadow-lg transition"
+                          >
+                            <FiMoreVertical className="w-5 h-5 text-gray-700" />
+                          </button>
+                          
+                          {showPostMenu === post.id && (
+                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-2xl border border-gray-100 py-2 z-30">
+                              <button
+                                onClick={() => handleStartEdit(post)}
+                                className="w-full px-4 py-2 text-left hover:bg-blue-50 flex items-center gap-3 text-gray-700 hover:text-blue-600 transition"
+                              >
+                                <FiEdit2 className="w-4 h-4" />
+                                <span className="font-medium">Edit Post</span>
+                              </button>
+                              
+                              <button
+                                onClick={() => {
+                                  setShowImageModal(post.id);
+                                  setShowPostMenu(null);
+                                }}
+                                className="w-full px-4 py-2 text-left hover:bg-purple-50 flex items-center gap-3 text-gray-700 hover:text-purple-600 transition"
+                              >
+                                <FiCamera className="w-4 h-4" />
+                                <span className="font-medium">Change Photo</span>
+                              </button>
+                              
+                              <button
+                                onClick={() => handleDeletePost(post.id)}
+                                className="w-full px-4 py-2 text-left hover:bg-red-50 flex items-center gap-3 text-gray-700 hover:text-red-600 transition"
+                              >
+                                <FiTrash2 className="w-4 h-4" />
+                                <span className="font-medium">Delete</span>
+                              </button>
+                              
+                              <div className="border-t border-gray-100 my-2"></div>
+                              
+                              <button
+                                onClick={async () => {
+                                  await fetchPostComments(post.id);
+                                  setShowCommentsModal(post.id);
+                                  setShowPostMenu(null);
+                                }}
+                                className="w-full px-4 py-2 text-left hover:bg-green-50 flex items-center gap-3 text-gray-700 hover:text-green-600 transition"
+                              >
+                                <FiMessageCircle className="w-4 h-4" />
+                                <span className="font-medium">View Comments</span>
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  await fetchPostLikes(post.id);
+                                  setShowLikesModal(post.id);
+                                }}
+                                className="w-full px-4 py-2 text-left hover:bg-green-50 flex items-center gap-3 text-gray-700 hover:text-green-600 transition"
+                              >
+                                <FiHeart className="w-4 h-4" />
+                                <span>View Likes</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
                         {/* Post Image */}
                         {post.image_url ? (
                           <div className="relative h-72 overflow-hidden">
@@ -732,14 +1055,11 @@ const Profile: React.FC = () => {
                           </div>
                         ) : (
                           <div className="h-72 bg-gradient-to-br from-orange-100 via-orange-200 to-red-100 flex items-center justify-center relative overflow-hidden">
-                            <div className="absolute inset-0 opacity-10" style={{
-                              backgroundImage: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23000000" fill-opacity="1"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
-                            }}></div>
                             <FiImage className="w-20 h-20 text-orange-400" />
                           </div>
                         )}
 
-                        {/* Post Content */}
+                        {/* Post Content & Stats */}
                         <div className="p-5">
                           {!post.image_url && (
                             <>
@@ -747,9 +1067,6 @@ const Profile: React.FC = () => {
                                 {post.title}
                               </h4>
                               <p className="text-sm text-gray-500 mb-3 flex items-center gap-2">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
                                 {new Date(post.created_at).toLocaleDateString("en-US", {
                                   month: "short",
                                   day: "numeric",
@@ -762,29 +1079,18 @@ const Profile: React.FC = () => {
                             {post.content}
                           </p>
 
-                          {/* Action Buttons */}
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleStartEdit(post)}
-                              className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2.5 rounded-xl transition font-semibold shadow-md flex items-center justify-center gap-2 hover:scale-105"
-                            >
-                              <FiEdit2 className="w-4 h-4" />
-                              <span className="hidden sm:inline">Edit</span>
-                            </button>
-                            <button
-                              onClick={() => setShowImageModal(post.id)}
-                              className="flex-1 bg-purple-500 hover:bg-purple-600 text-white py-2.5 rounded-xl transition font-semibold shadow-md flex items-center justify-center gap-2 hover:scale-105"
-                            >
-                              <FiCamera className="w-4 h-4" />
-                              <span className="hidden sm:inline">Photo</span>
-                            </button>
-                            <button
-                              onClick={() => handleDeletePost(post.id)}
-                              className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2.5 rounded-xl transition font-semibold shadow-md flex items-center justify-center gap-2 hover:scale-105"
-                            >
-                              <FiTrash2 className="w-4 h-4" />
-                              <span className="hidden sm:inline">Delete</span>
-                            </button>
+                          {/* Stats */}
+                          <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
+                            <div className="flex items-center gap-1">
+                              <FiHeart className="w-4 h-4" />
+                              <span className="font-semibold">{post.likes_count || 0}</span>
+                              <span>likes</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <FiMessageCircle className="w-4 h-4" />
+                              <span className="font-semibold">{post.comments_count || 0}</span>
+                              <span>comments</span>
+                            </div>
                           </div>
                         </div>
                       </>
@@ -812,7 +1118,431 @@ const Profile: React.FC = () => {
             )}
           </div>
         )}
-      </div>
+
+        {/* Liked Posts Tab */}
+        {activeTab === "liked" && (
+          <div className="max-w-2xl mx-auto">
+            {likedPosts.length > 0 ? (
+              <div className="space-y-6">
+                {likedPosts.map((post) => (
+                  <article
+                    key={post.id}
+                    className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-shadow duration-300"
+                  >
+                    {/* Post Header */}
+                    <div className="p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        {post.user?.image_url ? (
+                          <img
+                            src={post.user.image_url}
+                            alt={post.user.username}
+                            className="w-11 h-11 rounded-full object-cover ring-2 ring-orange-100"
+                          />
+                        ) : (
+                          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center ring-2 ring-orange-100">
+                            <span className="text-white font-bold text-sm">
+                              {post.user?.username?.[0]?.toUpperCase() || "U"}
+                            </span>
+                          </div>
+                        )}
+
+                        <div>
+                          <p className="font-semibold text-gray-900 text-sm">
+                            {post.user?.username || "Unknown User"}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {formatTimeAgo(post.created_at)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Post Image */}
+                    {post.image_url && (
+                      <div className="relative w-full bg-gray-100">
+                        <img
+                          src={post.image_url}
+                          alt={post.title}
+                          className="w-full max-h-[600px] object-contain"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {/* Post Actions */}
+                    <div className="p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-4">
+                          <button
+                            onClick={() => toggleLikeOnLikedPost(post.id)}
+                            className="group flex items-center gap-2 transition-all"
+                          >
+                            <FiHeart
+                              className="text-xl transition-all duration-300 fill-red-500 text-red-500 scale-110"
+                            />
+                            <span className="text-sm font-medium text-gray-700">
+                              {post.likes_count || 0}
+                            </span>
+                          </button>
+
+                          <button
+                            onClick={() => toggleLikedPostComments(post.id)}
+                            className="group flex items-center gap-2 transition-all"
+                          >
+                            <FiMessageCircle className="text-xl text-gray-700 group-hover:text-blue-500 transition" />
+                            <span className="text-sm font-medium text-gray-700">
+                              {post.comments_count || 0}
+                            </span>
+                          </button>
+                          <button
+                            onClick={() => setShowShareModal(post.id)}
+                            className="group flex items-center gap-2 transition-all"
+                          >
+                            <FiShare2 className="text-xl text-gray-700 group-hover:text-green-500 transition" />
+                            <span className="text-sm font-medium text-gray-700">Share</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Post Content */}
+                      <div className="space-y-2">
+                        {post.title && (
+                          <h2 className="text-lg font-bold text-gray-900">
+                            {post.title}
+                          </h2>
+                        )}
+                        <p className="text-gray-700 leading-relaxed">
+                          <span className="font-semibold text-gray-900">
+                            {post.user?.username}
+                          </span>{" "}
+                          {post.content}
+                        </p>
+                      </div>
+
+                      {/* Comments Section */}
+                      {showLikedPostComments[post.id] && (
+                        <div className="mt-4 pt-4 border-t border-gray-100">
+                          <div className="flex gap-2 mb-4">
+                            <input
+                              type="text"
+                              value={
+                                commentingOnLikedPost === post.id
+                                  ? likedPostCommentText
+                                  : ""
+                              }
+                              onFocus={() => setCommentingOnLikedPost(post.id)}
+                              onChange={(e) => setLikedPostCommentText(e.target.value)}
+                              placeholder="Add a comment..."
+                              className="flex-1 px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400 text-sm"
+                              onKeyPress={(e) => {
+                                if (e.key === "Enter") {
+                                  handleLikedPostCommentSubmit(post.id);
+                                }
+                              }}
+                            />
+                            <button
+                              onClick={() => handleLikedPostCommentSubmit(post.id)}
+                              disabled={!likedPostCommentText.trim()}
+                              className={`px-4 py-2 rounded-xl transition ${
+                                likedPostCommentText.trim()
+                                  ? "bg-orange-500 hover:bg-orange-600 text-white"
+                                  : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                              }`}
+                            >
+                              <FiSend className="w-5 h-5" />
+                            </button>
+                          </div>
+
+                          <div className="space-y-3 max-h-96 overflow-y-auto">
+                            {likedPostComments[post.id]?.map((comment) => (
+                              <div
+                                key={comment.id}
+                                className="flex gap-3 bg-gray-50 p-3 rounded-xl"
+                              >
+                                {comment.user?.image_url ? (
+                                  <img
+                                    src={comment.user.image_url}
+                                    alt={comment.user.username}
+                                    className="w-8 h-8 rounded-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
+                                    <span className="text-white font-bold text-xs">
+                                      {comment.user?.username?.[0]?.toUpperCase() ||
+                                        "U"}
+                                    </span>
+                                  </div>
+                                )}
+                                <div className="flex-1">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-semibold text-sm text-gray-900">
+                                        {comment.user?.username}
+                                      </span>
+                                      <span className="text-xs text-gray-500">
+                                        {formatTimeAgo(comment.created_at)}
+                                      </span>
+                                    </div>
+                                      {user?.id === comment.user_id && (
+                                        <div className="flex items-center gap-2">
+                                          <button
+                                            onClick={() => handleEditLikedPostComment(comment.id, comment.content)}
+                                            className="text-blue-500 hover:text-blue-700 transition"
+                                            title="Edit comment"
+                                          >
+                                            <FiEdit2 className="w-4 h-4" />
+                                          </button>
+                                          <button
+                                            onClick={() => handleDeleteLikedPostComment(comment.id, post.id)}
+                                            className="text-red-500 hover:text-red-700 transition"
+                                            title="Delete comment"
+                                          >
+                                            <FiTrash2 className="w-4 h-4" />
+                                          </button>
+                                        </div>
+                                      )}
+                                  </div>
+                                    {editingLikedCommentId === comment.id ? (
+                                      <div className="flex gap-2 mt-2">
+                                        <input
+                                          type="text"
+                                          value={editLikedCommentText}
+                                          onChange={(e) => setEditLikedCommentText(e.target.value)}
+                                          className="flex-1 px-3 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                          autoFocus
+                                          onKeyPress={(e) => {
+                                            if (e.key === "Enter" && editLikedCommentText.trim()) {
+                                              handleUpdateLikedPostComment(comment.id, post.id);
+                                            }
+                                            if (e.key === "Escape") {
+                                              setEditingLikedCommentId(null);
+                                              setEditLikedCommentText("");
+                                            }
+                                          }}
+                                        />
+                                        <button
+                                          onClick={() => handleUpdateLikedPostComment(comment.id, post.id)}
+                                          disabled={!editLikedCommentText.trim()}
+                                          className="px-3 py-1 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 disabled:opacity-50"
+                                        >
+                                          Save
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            setEditingLikedCommentId(null);
+                                            setEditLikedCommentText("");
+                                          }}
+                                          className="px-3 py-1 bg-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-400"
+                                        >
+                                          Cancel
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <p className="text-sm text-gray-700">{comment.content}</p>
+                                    )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white rounded-3xl shadow-2xl p-20 text-center border border-gray-100">
+                <div className="w-40 h-40 bg-gradient-to-br from-red-100 to-pink-200 rounded-full flex items-center justify-center mx-auto mb-8 shadow-xl">
+                  <FiHeart className="w-20 h-20 text-red-500" />
+                </div>
+                <h3 className="text-3xl font-bold text-gray-900 mb-4">
+                  No Liked Posts Yet
+                </h3>
+                <p className="text-gray-600 text-lg mb-8 max-w-md mx-auto">
+                  Start exploring and like posts that inspire you!
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+      {/* Comments Modal */}
+      {showCommentsModal !== null && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-md px-4 z-50">
+          <div className="bg-white shadow-2xl rounded-3xl w-full max-w-2xl overflow-hidden border border-gray-100 max-h-[80vh] flex flex-col">
+            <div className="bg-gradient-to-r from-green-500 to-emerald-500 p-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                  <FiMessageCircle className="w-6 h-6" />
+                  Comments
+                </h2>
+                <p className="text-white/90 mt-1">{postComments.length} comments</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowCommentsModal(null);
+                  setPostComments([]);
+                }}
+                className="bg-white/20 hover:bg-white/30 p-2 rounded-xl transition backdrop-blur-sm"
+              >
+                <FiX className="w-6 h-6 text-white" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1">
+              {postComments.length > 0 ? (
+                <div className="space-y-4">
+                  {postComments.map((comment) => (
+                    <div key={comment.id} className="flex gap-3 bg-gray-50 p-4 rounded-xl">
+                      {comment.user?.image_url ? (
+                        <img
+                          src={comment.user.image_url}
+                          alt={comment.user.username}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center">
+                          <span className="text-white font-bold text-sm">
+                            {comment.user?.username?.[0]?.toUpperCase() || "U"}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-semibold text-gray-900">
+                            {comment.user?.username}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {new Date(comment.created_at).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                        </div>
+                        <p className="text-gray-700">{comment.content}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <FiMessageCircle className="w-10 h-10 text-gray-400" />
+                  </div>
+                  <p className="text-gray-600">No comments yet</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Likes Modal */}
+      {showLikesModal !== null && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-md px-4 z-50">
+          <div className="bg-white shadow-2xl rounded-3xl w-full max-w-md overflow-hidden border border-gray-100 max-h-[70vh] flex flex-col">
+            <div className="bg-gradient-to-r from-red-500 to-pink-500 p-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                  <FiHeart className="w-6 h-6 fill-white" />
+                  Likes
+                </h2>
+                <p className="text-white/90 mt-1">{postLikes.length} people liked this</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowLikesModal(null);
+                  setPostLikes([]);
+                }}
+                className="bg-white/20 hover:bg-white/30 p-2 rounded-xl transition backdrop-blur-sm"
+              >
+                <FiX className="w-6 h-6 text-white" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1">
+              {postLikes.length > 0 ? (
+                <div className="space-y-3">
+                  {postLikes.map((like) => (
+                    <div key={like.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition">
+                      {like.user?.image_url ? (
+                        <img
+                          src={like.user.image_url}
+                          alt={like.user.username}
+                          className="w-12 h-12 rounded-full object-cover ring-2 ring-red-200"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-400 to-pink-600 flex items-center justify-center ring-2 ring-red-200">
+                          <span className="text-white font-bold text-lg">
+                            {like.user?.username?.[0]?.toUpperCase() || "U"}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <p className="font-semibold text-gray-900">
+                          {like.user?.username}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {like.user?.email}
+                        </p>
+                      </div>
+                      <FiHeart className="w-5 h-5 text-red-500 fill-red-500" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <FiHeart className="w-10 h-10 text-gray-400" />
+                  </div>
+                  <p className="text-gray-600">No likes yet</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Share Modal */}
+        {showShareModal !== null && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4 z-50">
+            <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-2xl font-bold text-gray-900">Share Post</h3>
+                <button
+                  onClick={() => setShowShareModal(null)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <FiX className="w-6 h-6" />
+                </button>
+              </div>
+
+              {/* Copy Link */}
+              <div className="mb-6">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={`${window.location.origin}/post/${showShareModal}`}
+                    readOnly
+                    className="flex-1 px-4 py-3 bg-gray-100 border border-gray-300 rounded-xl text-sm"
+                  />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/post/${showShareModal}`);
+                      alert("Link copied!");
+                    }}
+                    className="px-6 py-3 bg-orange-500 text-white rounded-xl font-semibold hover:bg-orange-600 transition"
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
       {/* Image Upload Modal */}
       {showImageModal !== null && (
@@ -914,6 +1644,7 @@ const Profile: React.FC = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

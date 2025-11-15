@@ -2,8 +2,10 @@ package services
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
+	"math/big"
 	"mime/multipart"
 	"net/mail"
 	"strings"
@@ -251,4 +253,23 @@ func validatePasswordStrength(password string) error {
 	}
 
 	return nil
+}
+
+// GenerateRandomPassword creates a secure random password for OAuth users
+func GenerateRandomPassword(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*"
+	password := make([]byte, length)
+
+	for i := range password {
+		// Use crypto/rand for secure random numbers
+		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		if err != nil {
+			// Fallback to a simple approach if crypto/rand fails
+			password[i] = charset[i%len(charset)]
+			continue
+		}
+		password[i] = charset[num.Int64()]
+	}
+
+	return string(password)
 }

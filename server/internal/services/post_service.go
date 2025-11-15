@@ -15,6 +15,94 @@ import (
 	"gorm.io/gorm"
 )
 
+// GetAllPostsWithStats gets all posts with like and comment counts
+func GetAllPostsWithStats(currentUserID uint) ([]map[string]interface{}, error) {
+	var posts []models.Post
+
+	if err := database.DB.
+		Preload("User").
+		Order("created_at DESC").
+		Find(&posts).Error; err != nil {
+		return nil, errors.New("failed to fetch posts")
+	}
+
+	// Build response with stats
+	result := make([]map[string]interface{}, len(posts))
+	for i, post := range posts {
+		// Get likes count
+		likesCount, _ := GetLikesCount(post.ID)
+
+		// Get comments count
+		commentsCount, _ := GetCommentsCount(post.ID)
+
+		// Check if current user liked
+		isLiked, _ := IsPostLikedByUser(currentUserID, post.ID)
+
+		// Clear password
+		post.User.Password = ""
+
+		result[i] = map[string]interface{}{
+			"id":             post.ID,
+			"title":          post.Title,
+			"content":        post.Content,
+			"image_url":      post.ImageURL.String,
+			"created_at":     post.CreatedAt,
+			"updated_at":     post.UpdatedAt,
+			"user_id":        post.UserID,
+			"user":           post.User,
+			"likes_count":    likesCount,
+			"comments_count": commentsCount,
+			"is_liked":       isLiked,
+		}
+	}
+
+	return result, nil
+}
+
+// GetUserPostsWithStats gets user posts with stats
+func GetUserPostsWithStats(userID, currentUserID uint) ([]map[string]interface{}, error) {
+	var posts []models.Post
+
+	if err := database.DB.Where("user_id = ?", userID).
+		Preload("User").
+		Order("created_at DESC").
+		Find(&posts).Error; err != nil {
+		return nil, errors.New("failed to fetch posts")
+	}
+
+	// Build response with stats
+	result := make([]map[string]interface{}, len(posts))
+	for i, post := range posts {
+		// Get likes count
+		likesCount, _ := GetLikesCount(post.ID)
+
+		// Get comments count
+		commentsCount, _ := GetCommentsCount(post.ID)
+
+		// Check if current user liked
+		isLiked, _ := IsPostLikedByUser(currentUserID, post.ID)
+
+		// Clear password
+		post.User.Password = ""
+
+		result[i] = map[string]interface{}{
+			"id":             post.ID,
+			"title":          post.Title,
+			"content":        post.Content,
+			"image_url":      post.ImageURL.String,
+			"created_at":     post.CreatedAt,
+			"updated_at":     post.UpdatedAt,
+			"user_id":        post.UserID,
+			"user":           post.User,
+			"likes_count":    likesCount,
+			"comments_count": commentsCount,
+			"is_liked":       isLiked,
+		}
+	}
+
+	return result, nil
+}
+
 // CreatePost creates a new post
 func CreatePost(userID uint, title, content string) (*models.Post, error) {
 	db := database.DB

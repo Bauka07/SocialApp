@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -83,7 +84,42 @@ func CreatePost(c *gin.Context) {
 	})
 }
 
-// GetMyPosts - Get all posts by current user
+func GetPosts(c *gin.Context) {
+	var currentUserID uint = 0
+
+	// Better debugging
+	userVal, exists := c.Get("userID")
+	fmt.Printf("DEBUG GetPosts - userID exists: %v, value: %v, type: %T\n", exists, userVal, userVal)
+
+	if exists {
+		if userIDStr, ok := userVal.(string); ok {
+			if uid, err := strconv.ParseUint(userIDStr, 10, 32); err == nil {
+				currentUserID = uint(uid)
+				fmt.Printf("DEBUG GetPosts - Parsed currentUserID: %d\n", currentUserID)
+			} else {
+				fmt.Printf("DEBUG GetPosts - Failed to parse: %v\n", err)
+			}
+		} else {
+			fmt.Printf("DEBUG GetPosts - userID type wrong: %T\n", userVal)
+		}
+	} else {
+		fmt.Println("DEBUG GetPosts - userID NOT in context!")
+	}
+
+	fmt.Printf("DEBUG GetPosts - Final currentUserID: %d\n", currentUserID)
+
+	posts, err := services.GetAllPostsWithStats(currentUserID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"posts": posts,
+	})
+}
+
+// GetMyPosts - Get all posts by current user with stats
 func GetMyPosts(c *gin.Context) {
 	userVal, exists := c.Get("userID")
 	if !exists {
@@ -103,7 +139,7 @@ func GetMyPosts(c *gin.Context) {
 		return
 	}
 
-	posts, err := services.GetUserPosts(uint(userID))
+	posts, err := services.GetUserPostsWithStats(uint(userID), uint(userID))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -131,19 +167,6 @@ func GetPostByID(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"post": post,
-	})
-}
-
-// GetPosts - Get all posts from all users (Dashboard feed)
-func GetPosts(c *gin.Context) {
-	posts, err := services.GetAllPosts()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"posts": posts,
 	})
 }
 
