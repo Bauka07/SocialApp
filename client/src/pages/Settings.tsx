@@ -3,7 +3,7 @@ import { API_URL } from "@/config/config";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
-import { FiEdit3, FiUser, FiMail, FiLock, FiCamera, FiUpload, FiTrash2, FiAlertTriangle, FiLogOut, FiShield } from "react-icons/fi";
+import { FiEdit3, FiUser, FiLock, FiCamera, FiUpload, FiLogOut, FiShield } from "react-icons/fi";
 
 interface User {
   id: number;
@@ -33,8 +33,8 @@ const Settings: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   
   // Delete account states
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+
+
   
   const navigate = useNavigate();
   const token = localStorage.getItem("token");

@@ -265,3 +265,18 @@ sudo systemctl status nginx
 ```bash
 sudo systemctl reload nginx
 ```
+
+
+export GOPROXY=https://proxy.golang.org,direct
+export GOSUMDB=sum.golang.org
+
+# Добавить в .bashrc для постоянного использования
+echo 'export GOPROXY=https://proxy.golang.org,direct' >> ~/.bashrc
+echo 'export GOSUMDB=sum.golang.org' >> ~/.bashrc
+source ~/.bashrc
+
+# Очистить кэш и пересобрать
+cd home/projects/SocialApp/server
+go clean -modcache
+go mod download
+go build -o socialapp ./cmd/main.go

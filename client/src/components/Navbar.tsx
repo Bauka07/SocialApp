@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { assets, menuLinks } from "../assets/assets.ts"
+import { menuLinks } from "../assets/assets.ts"
 import { Link, NavLink } from 'react-router-dom'
 import { Button } from "@/components/ui/button"
 

@@ -268,7 +268,6 @@ const Dashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
-  const [page, setPage] = useState<number>(0);
   const [hasMore, setHasMore] = useState<boolean>(true);
   const [commentingOn, setCommentingOn] = useState<number | null>(null);
   const [commentText, setCommentText] = useState("");
@@ -319,7 +318,6 @@ const Dashboard: React.FC = () => {
       
       setPosts(data.posts || []);
       setHasMore(data.has_more || false);
-      setPage(0);
       pageRef.current = 0; // Initialize ref
     } catch (err) {
       console.error(err);
@@ -361,7 +359,6 @@ const Dashboard: React.FC = () => {
         });
         
         pageRef.current = nextPage; // Update ref
-        setPage(nextPage); // Update state for display
         setHasMore(data.has_more || false);
       } else {
         console.log("No posts returned, setting hasMore to false");
