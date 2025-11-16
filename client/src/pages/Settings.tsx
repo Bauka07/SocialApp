@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { API_URL } from "@/config/config";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
@@ -50,7 +51,7 @@ const Settings: React.FC = () => {
 
     const fetchUserData = async () => {
       try {
-        const userRes = await axios.get("http://26.176.162.130:8080/users/me", {
+        const userRes = await axios.get(`${API_URL}/users/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -91,7 +92,7 @@ const Settings: React.FC = () => {
       }
 
       const res = await axios.put(
-        "http://26.176.162.130:8080/users/update",
+        `${API_URL}/users/update`,
         updatedData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -161,7 +162,7 @@ const Settings: React.FC = () => {
 
     try {
       const res = await axios.post(
-        "http://26.176.162.130:8080/users/upload-image",
+        `${API_URL}/users/upload-image`,
         formData,
         {
           headers: {
@@ -205,7 +206,7 @@ const Settings: React.FC = () => {
 
     try {
       await axios.put(
-        "http://26.176.162.130:8080/users/password",
+        `${API_URL}/users/password`,
         {
           old_password: oldPassword,
           new_password: newPassword,

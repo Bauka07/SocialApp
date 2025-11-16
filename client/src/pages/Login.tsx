@@ -25,7 +25,7 @@ type LoginResponse = {
   user: { id: number };
 };
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://26.176.162.130:8080';
+import { API_URL } from "@/config/config";
 const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY || '';
 
 const Login: React.FC = () => {

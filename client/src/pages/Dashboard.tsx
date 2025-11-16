@@ -53,7 +53,7 @@ interface PostCardProps {
   formatTimeAgo: (date: string) => string;
 }
 
-const API_URL = "http://26.176.162.130:8080";
+import { API_URL } from "@/config/config";
 
 // Memoized PostCard component for performance
 const PostCard = memo<PostCardProps>(({ 

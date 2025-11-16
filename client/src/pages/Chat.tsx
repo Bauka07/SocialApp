@@ -50,10 +50,8 @@ interface ChatContextMenu {
   chatUserId: number;
 }
 
-const BACKEND_HOST = "localhost";
-const BACKEND_PORT = "8080";
-const API_URL = `http://${BACKEND_HOST}:${BACKEND_PORT}/api`;
-const WS_URL = `ws://${BACKEND_HOST}:${BACKEND_PORT}/ws`;
+import { API_URL } from "@/config/config";
+const WS_URL = API_URL.replace(/^http/, "ws") + "/ws";
 
 const Chat: React.FC = () => {
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);

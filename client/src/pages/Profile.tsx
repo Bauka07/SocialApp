@@ -1,10 +1,9 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { FiEdit3, FiUser, FiMail, FiLock, FiImage, FiTrash2, FiEdit2, FiX, FiUpload, FiCamera, FiPlus, FiHeart, FiMoreVertical, FiMessageCircle, FiSend, FiShare2 } from "react-icons/fi";
-import Footer from "@/components/Footer";
+import { FiEdit3, FiImage, FiTrash2, FiEdit2, FiX, FiUpload, FiCamera, FiPlus, FiHeart, FiMoreVertical, FiMessageCircle, FiSend, FiShare2 } from "react-icons/fi";
+import { API_URL } from "@/config/config";
 
 interface Post {
   id: number;
@@ -89,11 +88,11 @@ const Profile: React.FC = () => {
 
     const fetchUserData = async () => {
       try {
-        const userRes = await axios.get("http://26.176.162.130:8080/users/me", {
+        const userRes = await axios.get(`${API_URL}/users/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         
-        const postsRes = await axios.get("http://26.176.162.130:8080/posts/my-posts", {
+        const postsRes = await axios.get(`${API_URL}/posts/my-posts`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -119,7 +118,7 @@ const Profile: React.FC = () => {
     if (!token) return;
     
     try {
-      const res = await axios.get(`http://26.176.162.130:8080/posts/${postId}/likes`, {
+      const res = await axios.get(`${API_URL}/posts/${postId}/likes`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setPostLikes(res.data.likes || []);
@@ -132,7 +131,7 @@ const Profile: React.FC = () => {
     if (!token) return;
     
     try {
-      const res = await axios.get("http://26.176.162.130:8080/posts/liked/my-likes", {
+      const res = await axios.get(`${API_URL}/posts/liked/my-likes`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setLikedPosts(res.data.posts || []);
@@ -146,7 +145,7 @@ const Profile: React.FC = () => {
     if (!token) return;
     
     try {
-      const res = await axios.get(`http://26.176.162.130:8080/posts/${postId}/comments`, {
+      const res = await axios.get(`${API_URL}/posts/${postId}/comments`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setPostComments(res.data.comments || []);
@@ -192,7 +191,7 @@ const Profile: React.FC = () => {
 
     try {
       const res = await axios.post(
-        `http://26.176.162.130:8080/posts/${postId}/like`,
+        `${API_URL}/posts/${postId}/like`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -222,7 +221,7 @@ const Profile: React.FC = () => {
 
     try {
       const res = await axios.get(
-        `http://26.176.162.130:8080/posts/${postId}/comments`,
+        `${API_URL}/posts/${postId}/comments`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setLikedPostComments((prev) => ({
@@ -247,7 +246,7 @@ const Profile: React.FC = () => {
 
     try {
       const res = await axios.post(
-        `http://26.176.162.130:8080/posts/${postId}/comments`,
+        `${API_URL}/posts/${postId}/comments`,
         { content: likedPostCommentText },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -274,14 +273,12 @@ const Profile: React.FC = () => {
     }
   };
 
-  
-
   const handleDeleteLikedPostComment = async (commentId: number, postId: number) => {
     if (!token) return;
     if (!confirm("Delete this comment?")) return;
 
     try {
-      await axios.delete(`http://26.176.162.130:8080/comments/${commentId}`, {
+      await axios.delete(`${API_URL}/comments/${commentId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -314,7 +311,7 @@ const Profile: React.FC = () => {
 
     try {
       const res = await axios.put(
-        `http://26.176.162.130:8080/comments/${commentId}`,
+        `${API_URL}/comments/${commentId}`,
         { content: editLikedCommentText },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -388,7 +385,7 @@ const Profile: React.FC = () => {
 
     try {
       const res = await axios.post(
-        `http://26.176.162.130:8080/posts/${postId}/upload-image`,
+        `${API_URL}/posts/${postId}/upload-image`,
         formData,
         {
           headers: {
@@ -444,7 +441,7 @@ const Profile: React.FC = () => {
       }
 
       const res = await axios.post(
-        "http://26.176.162.130:8080/posts",
+        `${API_URL}/posts`,
         formData,
         { 
           headers: { 
@@ -494,7 +491,7 @@ const Profile: React.FC = () => {
 
     try {
       const res = await axios.put(
-        `http://26.176.162.130:8080/posts/${postId}`,
+        `${API_URL}/posts/${postId}`,
         editPostData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -527,7 +524,7 @@ const Profile: React.FC = () => {
     if (!token) return;
 
     try {
-      await axios.delete(`http://26.176.162.130:8080/posts/${id}`, {
+      await axios.delete(`${API_URL}/posts/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       toast.success("Post deleted");
@@ -565,7 +562,7 @@ const Profile: React.FC = () => {
             <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-orange-300/30 to-pink-300/30 rounded-full blur-3xl"></div>
             <div className="absolute bottom-0 left-0 w-80 h-80 bg-gradient-to-tr from-purple-300/30 to-blue-300/30 rounded-full blur-3xl"></div>
             <div className="absolute inset-0 opacity-5" style={{
-              backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\\"60\\" height=\\"60\\" viewBox=\\"0 0 60 60\\" xmlns=\\"http://www.w3.org/2000/svg\\"%3E%3Cg fill=\\"none\\" fill-rule=\\"evenodd\\"%3E%3Cg fill=\\"%23000000\\" fill-opacity=\\"1\\"%3E%3Cpath d=\\"M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+              backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\\"60\\" height=\\"60\\" viewBox=\\"0 0 60 60\\" xmlns=\\"http://www.w3.org/2000/svg\\"%3E%3Cg fill=\\"none\\" fill-rule=\\"evenodd\\"%3E%3Cg fill=\\"%23000000\\" fill-opacity=\\"1\\"%3E%3Cpath d=\\"M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM36 0V4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
             }}></div>
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/10 to-white/50"></div>
           </div>
@@ -623,7 +620,7 @@ const Profile: React.FC = () => {
         </div>
 
         {/* Tab Navigation */}
-        <div className="bg-white rounded-2xl shadow-xl mb-8 p-2 inline-flex gap-2 mx-auto block w-full md:w-auto">
+        <div className="bg-white rounded-2xl shadow-xl mb-8 p-2 flex gap-2 mx-auto w-full md:w-auto">
           <button
             onClick={() => setActiveTab("posts")}
             className={`flex-1 md:flex-initial py-4 px-8 rounded-xl font-bold transition-all flex items-center justify-center gap-3 ${

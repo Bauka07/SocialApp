@@ -13,7 +13,7 @@ type ApiError = {
   error: string;
 };
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://26.176.162.130:8080';
+import { API_URL } from "@/config/config";
 
 const ForgotPassword: React.FC = () => {
   const navigate = useNavigate();
