@@ -14,6 +14,8 @@ import ProtectedRoute from './components/ProtectedRoute'
 import Profile from './pages/Profile'
 import Chat from './pages/Chat'
 import Settings from "./pages/Settings"
+import OAuthCallback from './pages/OAuthCallback'
+import ForgotPassword from './pages/ForgotPassword'
 
 const App = () => {
   const location = useLocation();
@@ -90,6 +92,8 @@ const App = () => {
           <Route path='/contact' element={<Contact />} />
           <Route path='/register' element={<Register />} />
           <Route path='/login' element={<Login />} />
+          <Route path='/auth/callback' element={<OAuthCallback />} />
+          <Route path='/forgot-password' element={<ForgotPassword />} />
 
           <Route
             path='/dashboard'

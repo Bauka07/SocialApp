@@ -17,5 +17,8 @@ type User struct {
 	Password string `json:"password,omitempty" gorm:"not null"`
 	ImageURL string `json:"image_url,omitempty" gorm:"size:255"`
 
+	Provider   string `json:"provider,omitempty" gorm:"size:20;default:'local'"`
+	ProviderID string `json:"provider_id,omitempty" gorm:"size:100"`
+
 	Posts []Post `json:"posts,omitempty" gorm:"foreignKey:UserID"`
 }

@@ -1,8 +1,8 @@
+// controllers/posts_controller.go
 package controllers
 
 import (
 	"database/sql"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -12,7 +12,6 @@ import (
 
 // CreatePost - Create a new post with optional image
 func CreatePost(c *gin.Context) {
-	// Get userID from JWT
 	userVal, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
@@ -31,21 +30,18 @@ func CreatePost(c *gin.Context) {
 		return
 	}
 
-	// Get title and content from form data
 	title := c.PostForm("title")
 	content := c.PostForm("content")
 
-	// Create post first
 	post, err := services.CreatePost(uint(userID), title, content)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Check if image is uploaded
+	// Handle optional image upload
 	fileHeader, err := c.FormFile("image")
 	if err == nil {
-		// Image was provided
 		if err := services.ValidateImageFile(fileHeader); err != nil {
 			c.JSON(http.StatusCreated, gin.H{
 				"message": "post created but image is invalid",
@@ -81,41 +77,6 @@ func CreatePost(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "post created successfully",
 		"post":    post,
-	})
-}
-
-func GetPosts(c *gin.Context) {
-	var currentUserID uint = 0
-
-	// Better debugging
-	userVal, exists := c.Get("userID")
-	fmt.Printf("DEBUG GetPosts - userID exists: %v, value: %v, type: %T\n", exists, userVal, userVal)
-
-	if exists {
-		if userIDStr, ok := userVal.(string); ok {
-			if uid, err := strconv.ParseUint(userIDStr, 10, 32); err == nil {
-				currentUserID = uint(uid)
-				fmt.Printf("DEBUG GetPosts - Parsed currentUserID: %d\n", currentUserID)
-			} else {
-				fmt.Printf("DEBUG GetPosts - Failed to parse: %v\n", err)
-			}
-		} else {
-			fmt.Printf("DEBUG GetPosts - userID type wrong: %T\n", userVal)
-		}
-	} else {
-		fmt.Println("DEBUG GetPosts - userID NOT in context!")
-	}
-
-	fmt.Printf("DEBUG GetPosts - Final currentUserID: %d\n", currentUserID)
-
-	posts, err := services.GetAllPostsWithStats(currentUserID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"posts": posts,
 	})
 }
 
@@ -283,20 +244,17 @@ func UploadPostImage(c *gin.Context) {
 		return
 	}
 
-	// Get uploaded file
 	fileHeader, err := c.FormFile("image")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "no image uploaded"})
 		return
 	}
 
-	// Validate file
 	if err := services.ValidateImageFile(fileHeader); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Open file
 	src, err := fileHeader.Open()
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to open image"})
@@ -304,7 +262,6 @@ func UploadPostImage(c *gin.Context) {
 	}
 	defer src.Close()
 
-	// Upload image
 	url, err := services.UpdatePostImage(uint(postID), uint(userID), src)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

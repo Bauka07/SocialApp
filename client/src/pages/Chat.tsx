@@ -82,9 +82,9 @@ const Chat: React.FC = () => {
   const typingTimeoutRef = useRef<number | null>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const selectedChatRef = useRef<Chat | null>(null);
-  const isFetchingChatsRef = useRef(false); // FIXED: Prevent multiple simultaneous fetches
+  const isFetchingChatsRef = useRef(false);
 
-  const [sidebarWidth, setSidebarWidth] = useState(320); // default 320px
+  const [sidebarWidth, setSidebarWidth] = useState(320);
   const [isResizing, setIsResizing] = useState(false);
 
   const handleMouseDown = () => setIsResizing(true);
@@ -142,6 +142,7 @@ const Chat: React.FC = () => {
           const data = await response.json();
           const user = data.user || data;
           setCurrentUser(user);
+          console.log("✅ Current user loaded:", user.username);
         } else {
           if (response.status === 401) {
             alert("Session expired. Please login again.");
@@ -154,17 +155,16 @@ const Chat: React.FC = () => {
     fetchCurrentUser();
   }, []);
 
+  // FIXED: WebSocket with stable reference to prevent infinite loops
   useEffect(() => {
-    if (!currentUser) {
-      return;
-    }
+    if (!currentUser) return;
 
     const token = localStorage.getItem("token");
-    if (!token) {
-      return;
-    }
+    if (!token) return;
 
+    console.log("🔌 Creating WebSocket connection...");
     const websocket = new WebSocket(`${WS_URL}?token=${token}`);
+    let isCleaningUp = false;
 
     websocket.onopen = () => {
       console.log("✅ WebSocket connected");
@@ -173,6 +173,13 @@ const Chat: React.FC = () => {
     websocket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        console.log("📨 Received:", data.type);
+        
+        if (data.type === "error") {
+          console.error("❌ Server error:", data.error);
+          alert(data.error);
+          return;
+        }
         
         if (data.type === "new_message") {
           const newMessage: Message = data.message;
@@ -180,9 +187,7 @@ const Chat: React.FC = () => {
           const isRelevant = newMessage.sender_id === currentUser.id || 
                             newMessage.receiver_id === currentUser.id;
           
-          if (!isRelevant) {
-            return;
-          }
+          if (!isRelevant) return;
           
           const belongsToCurrentChat = selectedChatRef.current && (
             (newMessage.sender_id === currentUser.id && newMessage.receiver_id === selectedChatRef.current.user.id) ||
@@ -191,7 +196,9 @@ const Chat: React.FC = () => {
           
           if (belongsToCurrentChat) {
             setMessages((prev) => {
-              if (prev.find(m => m.id === newMessage.id)) return prev;
+              if (prev.find(m => m.id === newMessage.id)) {
+                return prev;
+              }
               
               const optimisticIndex = prev.findIndex(
                 m => m.id > 1000000000000 &&
@@ -214,7 +221,6 @@ const Chat: React.FC = () => {
             }
           }
           
-          // FIXED: Only fetch chats once per message
           fetchChats();
         } else if (data.type === "user_status") {
           setChats((prev) =>
@@ -257,45 +263,58 @@ const Chat: React.FC = () => {
           );
           fetchChats();
         } else if (data.type === "chat_deleted") {
-          // FIXED: Handle chat deletion properly
           setChats(prev => prev.filter(c => c.user.id !== data.other_user_id));
-          if (selectedChat?.user.id === data.other_user_id) {
+          if (selectedChatRef.current?.user.id === data.other_user_id) {
             setSelectedChat(null);
             setMessages([]);
           }
-          // Don't fetch chats here - it's already been deleted
         }
       } catch (error) {
-        console.error("Error parsing WebSocket message:", error);
+        console.error("❌ Error parsing WebSocket message:", error);
       }
     };
 
     websocket.onerror = (error) => {
-      console.error("❌ WebSocket error", error);
+      console.error("❌ WebSocket error:", error);
     };
 
-    websocket.onclose = () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
+    websocket.onclose = (event) => {
+      console.log("🔌 WebSocket closed. Code:", event.code);
+      
+      if (isCleaningUp) {
+        console.log("✅ Intentional close");
+        return;
       }
-      reconnectTimeoutRef.current = window.setTimeout(() => {
-        if (currentUser) {
-          setWs(null);
+      
+      // Reconnect on unexpected close
+      if (event.code !== 1000 && event.code !== 1001) {
+        console.log("🔄 Reconnecting in 3s...");
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
         }
-      }, 3000);
+        reconnectTimeoutRef.current = window.setTimeout(() => {
+          // Force re-render to trigger reconnection
+          setWs(null);
+          setTimeout(() => setWs({} as WebSocket), 100);
+        }, 3000);
+      }
     };
 
+    // Set the websocket in state
     setWs(websocket);
 
     return () => {
+      console.log("🧹 Cleanup");
+      isCleaningUp = true;
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
-      websocket.close();
+      if (websocket.readyState === WebSocket.OPEN || websocket.readyState === WebSocket.CONNECTING) {
+        websocket.close(1000, "Cleanup");
+      }
     };
-  }, [currentUser]);
+  }, [currentUser]); // FIXED: Removed ws from dependencies!
 
-  // FIXED: Prevent multiple simultaneous chat fetches
   const fetchChats = async () => {
     if (isFetchingChatsRef.current) {
       console.log("⏳ Already fetching chats, skipping...");
@@ -435,7 +454,7 @@ const Chat: React.FC = () => {
   };
 
   const handleTyping = () => {
-    if (!ws || !selectedChat) return;
+    if (!ws || !selectedChat || ws.readyState !== WebSocket.OPEN) return;
 
     if (!isTyping) {
       setIsTyping(true);
@@ -461,59 +480,77 @@ const Chat: React.FC = () => {
   };
 
   const handleSendMessage = async () => {
-    if (messageInput.trim() && selectedChat && ws && ws.readyState === WebSocket.OPEN && currentUser) {
-      const messageContent = messageInput.trim();
-
-      if (editingMessage) {
-        const token = localStorage.getItem("token");
-        try {
-          const response = await fetch(`${API_URL}/messages/${editingMessage.id}`, {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ content: messageContent }),
-          });
-
-          if (response.ok) {
-            setEditingMessage(null);
-            setMessageInput("");
-          }
-        } catch (error) {
-          console.error("Error editing message:", error);
-        }
-      } else {
-        const messageData = {
-          type: "send_message",
-          receiver_id: selectedChat.user.id,
-          content: messageContent,
-          reply_to_id: replyingTo?.id || null,
-        };
-
-        const optimisticMessage: Message = {
-          id: Date.now(),
-          content: messageContent,
-          sender_id: currentUser.id,
-          receiver_id: selectedChat.user.id,
-          created_at: new Date().toISOString(),
-          is_read: false,
-          reply_to_id: replyingTo?.id,
-          reply_to: replyingTo || undefined,
-        };
-
-        setMessages((prev) => [...prev, optimisticMessage]);
-        setMessageInput("");
-        setIsTyping(false);
-        setReplyingTo(null);
-
-        ws.send(JSON.stringify({
-          type: "stop_typing",
-          receiver_id: selectedChat.user.id
-        }));
-
-        ws.send(JSON.stringify(messageData));
+    if (!messageInput.trim() || !selectedChat || !ws || ws.readyState !== WebSocket.OPEN || !currentUser) {
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        console.error("❌ Cannot send: WebSocket not connected. State:", ws?.readyState);
+        alert("Connection lost. Please refresh the page.");
       }
+      return;
+    }
+
+    const messageContent = messageInput.trim();
+
+    if (editingMessage) {
+      const token = localStorage.getItem("token");
+      try {
+        const response = await fetch(`${API_URL}/messages/${editingMessage.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ content: messageContent }),
+        });
+
+        if (response.ok) {
+          setEditingMessage(null);
+          setMessageInput("");
+        } else {
+          alert("Failed to edit message");
+        }
+      } catch (error) {
+        console.error("Error editing message:", error);
+        alert("Failed to edit message");
+      }
+      return;
+    }
+
+    const messageData = {
+      type: "send_message",
+      receiver_id: selectedChat.user.id,
+      content: messageContent,
+      reply_to_id: replyingTo?.id || null,
+    };
+
+    const optimisticMessage: Message = {
+      id: Date.now() + Math.random() * 1000,
+      content: messageContent,
+      sender_id: currentUser.id,
+      receiver_id: selectedChat.user.id,
+      created_at: new Date().toISOString(),
+      is_read: false,
+      reply_to_id: replyingTo?.id,
+      reply_to: replyingTo || undefined,
+    };
+
+    setMessages((prev) => [...prev, optimisticMessage]);
+    setMessageInput("");
+    setIsTyping(false);
+    setReplyingTo(null);
+
+    try {
+      ws.send(JSON.stringify({
+        type: "stop_typing",
+        receiver_id: selectedChat.user.id
+      }));
+
+      console.log("📤 Sending message...");
+      ws.send(JSON.stringify(messageData));
+      console.log("✅ Message sent");
+    } catch (error) {
+      console.error("❌ Failed to send message:", error);
+      setMessages((prev) => prev.filter(m => m.id !== optimisticMessage.id));
+      alert("Failed to send message. Please check your connection and try again.");
     }
   };
 
@@ -543,33 +580,31 @@ const Chat: React.FC = () => {
     setShowSearchResults(false);
   };
 
-    const handleMessageRightClick = (e: React.MouseEvent, message: Message) => {
-      e.preventDefault();
+  const handleMessageRightClick = (e: React.MouseEvent, message: Message) => {
+    e.preventDefault();
 
-      const menuWidth = 200; // matches min-w-[200px]
-      const menuHeight = 150; // approximate, adjust if needed
-      const offset = 8; // small space between cursor and menu
+    const menuWidth = 200;
+    const menuHeight = 150;
+    const offset = 8;
 
-      const clickX = e.clientX;
-      const clickY = e.clientY;
-      const windowWidth = window.innerWidth;
-      const windowHeight = window.innerHeight;
+    const clickX = e.clientX;
+    const clickY = e.clientY;
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
 
-      // Adjust position to prevent overflow
-      let x = clickX + offset;
-      let y = clickY + offset;
+    let x = clickX + offset;
+    let y = clickY + offset;
 
-      if (x + menuWidth > windowWidth) x = windowWidth - menuWidth - offset;
-      if (y + menuHeight > windowHeight) y = windowHeight - menuHeight - offset;
+    if (x + menuWidth > windowWidth) x = windowWidth - menuWidth - offset;
+    if (y + menuHeight > windowHeight) y = windowHeight - menuHeight - offset;
 
-      setContextMenu({
-        x,
-        y,
-        messageId: message.id,
-        isOwnMessage: message.sender_id === currentUser?.id,
-      });
-    };
-
+    setContextMenu({
+      x,
+      y,
+      messageId: message.id,
+      isOwnMessage: message.sender_id === currentUser?.id,
+    });
+  };
 
   const handleChatRightClick = (e: React.MouseEvent, userId: number) => {
     e.preventDefault();
@@ -609,7 +644,6 @@ const Chat: React.FC = () => {
     setMessageToDelete(null);
   };
 
-  // FIXED: Improved chat deletion handler
   const handleDeleteChat = async (deleteFor: "me" | "all") => {
     if (!chatToDelete) return;
 
@@ -625,16 +659,13 @@ const Chat: React.FC = () => {
       });
 
       if (response.ok) {
-        // FIXED: Update UI immediately without fetching
         if (selectedChat?.user.id === chatToDelete) {
           setSelectedChat(null);
           setMessages([]);
         }
         
-        // Remove chat from list immediately
         setChats(prev => prev.filter(c => c.user.id !== chatToDelete));
         
-        // Only fetch chats after a delay to get updated data
         setTimeout(() => {
           fetchChats();
         }, 500);
@@ -649,6 +680,7 @@ const Chat: React.FC = () => {
     setShowChatDeleteModal(false);
     setChatToDelete(null);
   };
+
   const isReplyDeleted = (replyMsg: Message) => {
     if (!currentUser) return true;
     if (replyMsg.sender_id === currentUser.id && replyMsg.deleted_for_sender) return true;
@@ -842,8 +874,7 @@ const Chat: React.FC = () => {
         className={`w-1 cursor-col-resize transition ${
           isResizing ? "bg-orange-500 shadow-md" : "bg-gray-200 hover:bg-orange-400"
         }`}
-      >
-      </div>
+      />
 
       <div className="flex-1 flex flex-col">
         {selectedChat ? (

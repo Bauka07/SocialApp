@@ -10,6 +10,7 @@ import (
 	"github.com/Bauka07/SocialApp/internal/database"
 	"github.com/Bauka07/SocialApp/internal/models"
 	"github.com/Bauka07/SocialApp/internal/routes"
+	"github.com/Bauka07/SocialApp/internal/services"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -32,6 +33,7 @@ func main() {
 	// Initialize configuration (JWT, etc.)
 	config.InitConfig()
 	config.InitCloudinary()
+	services.InitGoogleOAuth()
 
 	// Initialize Gin
 	r := gin.Default()
@@ -62,6 +64,7 @@ func main() {
 		&models.Like{},
 		&models.Comment{},
 		&models.PostWithStats{},
+		&models.PasswordReset{}, // Added password reset model
 	); err != nil {
 		fmt.Println("Migration error:", err)
 	} else {
@@ -73,6 +76,7 @@ func main() {
 	routes.ContactRoutes(r)
 	routes.PostRoutes(r)
 	routes.ChatRoutes(r)
+	routes.SetupPasswordResetRoutes(r) // Fixed: removed comma and used correct variable 'r'
 
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "Server Running Successfully..."})

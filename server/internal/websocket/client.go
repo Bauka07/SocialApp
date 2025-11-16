@@ -28,7 +28,7 @@ type WebSocketMessage struct {
 	Type       string `json:"type"`
 	ReceiverID uint   `json:"receiver_id"`
 	Content    string `json:"content"`
-	ReplyToID  *uint  `json:"reply_to_id,omitempty"` // Add this
+	ReplyToID  *uint  `json:"reply_to_id,omitempty"`
 }
 
 func NewClient(hub *Hub, conn *websocket.Conn, userID uint) *Client {
@@ -40,7 +40,6 @@ func NewClient(hub *Hub, conn *websocket.Conn, userID uint) *Client {
 	}
 }
 
-// ReadPump pumps messages from the websocket connection to the hub
 func (c *Client) ReadPump() {
 	defer func() {
 		c.hub.unregister <- c
@@ -81,7 +80,6 @@ func (c *Client) ReadPump() {
 	}
 }
 
-// handleTyping sends typing notification to receiver
 func (c *Client) handleTyping(wsMsg WebSocketMessage) {
 	response := map[string]interface{}{
 		"type":    "typing",
@@ -92,7 +90,6 @@ func (c *Client) handleTyping(wsMsg WebSocketMessage) {
 	c.hub.SendToUser(wsMsg.ReceiverID, responseJSON)
 }
 
-// handleStopTyping sends stop typing notification to receiver
 func (c *Client) handleStopTyping(wsMsg WebSocketMessage) {
 	response := map[string]interface{}{
 		"type":    "stop_typing",
@@ -103,7 +100,6 @@ func (c *Client) handleStopTyping(wsMsg WebSocketMessage) {
 	c.hub.SendToUser(wsMsg.ReceiverID, responseJSON)
 }
 
-// WritePump pumps messages from the hub to the websocket connection
 func (c *Client) WritePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
@@ -126,7 +122,6 @@ func (c *Client) WritePump() {
 			}
 			w.Write(message)
 
-			// Add queued messages to the current websocket message
 			n := len(c.send)
 			for i := 0; i < n; i++ {
 				w.Write([]byte{'\n'})
@@ -147,45 +142,85 @@ func (c *Client) WritePump() {
 }
 
 func (c *Client) handleSendMessage(wsMsg WebSocketMessage) {
-	// Save message to database
+	// FIXED: Add validation
+	if wsMsg.Content == "" {
+		log.Printf("❌ Empty message content from user %d", c.UserID)
+		return
+	}
+
+	if wsMsg.ReceiverID == 0 {
+		log.Printf("❌ Invalid receiver ID from user %d", c.UserID)
+		return
+	}
+
+	// FIXED: Prevent sending messages to self
+	if wsMsg.ReceiverID == c.UserID {
+		log.Printf("❌ User %d tried to send message to themselves", c.UserID)
+		return
+	}
+
 	message := models.Message{
 		Content:    wsMsg.Content,
 		SenderID:   c.UserID,
 		ReceiverID: wsMsg.ReceiverID,
 		IsRead:     false,
-		ReplyToID:  wsMsg.ReplyToID, // Add reply support
+		ReplyToID:  wsMsg.ReplyToID,
 	}
 
 	// If replying to a message, verify it exists and isn't deleted
 	if wsMsg.ReplyToID != nil {
 		var replyToMsg models.Message
 		if err := database.DB.First(&replyToMsg, *wsMsg.ReplyToID).Error; err != nil {
-			log.Printf("Error finding reply message: %v", err)
+			log.Printf("❌ Error finding reply message: %v", err)
 			return
 		}
 
 		// Check if message is deleted for either user
 		if (replyToMsg.SenderID == c.UserID && replyToMsg.DeletedForSender) ||
 			(replyToMsg.ReceiverID == c.UserID && replyToMsg.DeletedForReceiver) {
-			log.Printf("Cannot reply to deleted message")
+			log.Printf("❌ Cannot reply to deleted message")
 			return
 		}
 
 		// Verify the reply message is part of this conversation
 		if !((replyToMsg.SenderID == c.UserID && replyToMsg.ReceiverID == wsMsg.ReceiverID) ||
 			(replyToMsg.SenderID == wsMsg.ReceiverID && replyToMsg.ReceiverID == c.UserID)) {
-			log.Printf("Reply message not part of conversation")
+			log.Printf("❌ Reply message not part of conversation")
 			return
 		}
 	}
 
-	if err := database.DB.Create(&message).Error; err != nil {
-		log.Printf("Error saving message: %v", err)
+	// FIXED: Add transaction and better error handling
+	tx := database.DB.Begin()
+	if tx.Error != nil {
+		log.Printf("❌ Error starting transaction: %v", tx.Error)
+		return
+	}
+
+	if err := tx.Create(&message).Error; err != nil {
+		tx.Rollback()
+		log.Printf("❌ Error saving message: %v", err)
+
+		// Send error to sender
+		errorResponse := map[string]interface{}{
+			"type":  "error",
+			"error": "Failed to send message",
+		}
+		errorJSON, _ := json.Marshal(errorResponse)
+		c.send <- errorJSON
+		return
+	}
+
+	// Commit transaction
+	if err := tx.Commit().Error; err != nil {
+		log.Printf("❌ Error committing transaction: %v", err)
 		return
 	}
 
 	// Load relations (including reply_to)
 	database.DB.Preload("Sender").Preload("Receiver").Preload("ReplyTo").First(&message, message.ID)
+
+	log.Printf("✅ Message saved: ID=%d, From=%d, To=%d", message.ID, message.SenderID, message.ReceiverID)
 
 	// Prepare response
 	response := map[string]interface{}{
@@ -195,12 +230,17 @@ func (c *Client) handleSendMessage(wsMsg WebSocketMessage) {
 
 	responseJSON, err := json.Marshal(response)
 	if err != nil {
-		log.Printf("Error marshaling response: %v", err)
+		log.Printf("❌ Error marshaling response: %v", err)
 		return
 	}
 
 	// Send to sender (confirmation)
-	c.send <- responseJSON
+	select {
+	case c.send <- responseJSON:
+		log.Printf("✅ Confirmation sent to sender %d", c.UserID)
+	default:
+		log.Printf("⚠️ Could not send confirmation to sender %d (channel full)", c.UserID)
+	}
 
 	// Send to receiver if online
 	c.hub.SendToUser(wsMsg.ReceiverID, responseJSON)

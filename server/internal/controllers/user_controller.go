@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/Bauka07/SocialApp/internal/database"
 	"github.com/Bauka07/SocialApp/internal/middleware"
@@ -11,8 +12,20 @@ import (
 	"github.com/Bauka07/SocialApp/internal/services"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/oauth2"
+	"gorm.io/gorm"
 )
 
+// -------------- HELPER FUNCTIONS --------------
+
+func generateUsername(email string) string {
+	parts := strings.Split(email, "@")
+	return parts[0]
+}
+
+// -------------- STANDARD AUTH --------------
+
+// Register user without reCAPTCHA (for internal use)
 func Register(c *gin.Context) {
 	var req models.User
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -31,7 +44,9 @@ func Register(c *gin.Context) {
 	user := models.User{
 		Username: req.Username,
 		Email:    req.Email,
-		Password: string(hashed)}
+		Password: string(hashed),
+		Provider: "local",
+	}
 	if err := database.DB.Create(&user).Error; err != nil {
 		c.JSON(400, gin.H{"error": "Could not create user"})
 		return
@@ -48,31 +63,264 @@ func Register(c *gin.Context) {
 	})
 }
 
-func Login(c *gin.Context) {
-	var req models.User
+// RegisterWithRecaptcha - Fixed version
+func RegisterWithRecaptcha(c *gin.Context) {
+	var req struct {
+		Username       string `json:"username" binding:"required"`
+		Email          string `json:"email" binding:"required"`
+		Password       string `json:"password" binding:"required"`
+		RecaptchaToken string `json:"recaptcha_token" binding:"required"`
+	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(400, gin.H{"error": "Invalid Input!"})
 		return
 	}
 
-	user, err := services.LEH(&req)
+	// Verify reCAPTCHA
+	if err := services.VerifyRecaptcha(req.RecaptchaToken); err != nil {
+		c.JSON(400, gin.H{"error": "reCAPTCHA verification failed"})
+		return
+	}
+
+	// Create user struct for validation
+	user := models.User{
+		Username: req.Username,
+		Email:    req.Email,
+		Password: req.Password,
+	}
+
+	if err := services.REH(&user); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to hash password"})
+		return
+	}
+
+	user.Password = string(hashed)
+	user.Provider = "local"
+
+	if err := database.DB.Create(&user).Error; err != nil {
+		c.JSON(400, gin.H{"error": "Could not create user"})
+		return
+	}
+
+	token, err := middleware.CreateToken(user)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to create token"})
+		return
+	}
+
+	c.JSON(201, gin.H{
+		"message": "User registered successfully",
+		"token":   token,
+		"user":    gin.H{"id": user.ID},
+	})
+}
+
+// LoginWithRecaptcha
+func LoginWithRecaptcha(c *gin.Context) {
+	var req struct {
+		Email          string `json:"email" binding:"required"`
+		Password       string `json:"password" binding:"required"`
+		RecaptchaToken string `json:"recaptcha_token" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": "Invalid Input!"})
+		return
+	}
+
+	// Verify reCAPTCHA
+	if err := services.VerifyRecaptcha(req.RecaptchaToken); err != nil {
+		c.JSON(400, gin.H{"error": "reCAPTCHA verification failed"})
+		return
+	}
+
+	// Create user struct for login
+	user := models.User{
+		Email:    req.Email,
+		Password: req.Password,
+	}
+
+	loggedInUser, err := services.LEH(&user)
 	if err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
 
-	token, err := middleware.CreateToken(*user)
+	token, err := middleware.CreateToken(*loggedInUser)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Failed to create token"})
 		return
 	}
+
 	c.JSON(200, gin.H{
 		"message": "Logged in successfully",
 		"token":   token,
-		"user":    gin.H{"id": user.ID},
+		"user":    gin.H{"id": loggedInUser.ID},
 	})
 }
+
+// -------------- GOOGLE OAUTH --------------
+
+// GoogleLogin - Server-side OAuth flow (generates OAuth URL)
+func GoogleLogin(c *gin.Context) {
+	url := services.GoogleOAuthConfig.AuthCodeURL("state", oauth2.AccessTypeOffline)
+	c.JSON(http.StatusOK, gin.H{"url": url})
+}
+
+// GoogleCallback - Server-side OAuth callback
+func GoogleCallback(c *gin.Context) {
+	code := c.Query("code")
+	if code == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "code not found"})
+		return
+	}
+
+	userInfo, err := services.GetGoogleUserInfo(code)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	var user models.User
+	result := database.DB.Where("provider = ? AND provider_id = ?", "google", userInfo.ID).First(&user)
+
+	if result.Error == gorm.ErrRecordNotFound {
+		// Create new user
+		username := generateUsername(userInfo.Email)
+		password := services.GenerateRandomPassword(16)
+		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+
+		user = models.User{
+			Username:   username,
+			Email:      userInfo.Email,
+			Password:   string(hashedPassword),
+			ImageURL:   userInfo.Picture,
+			Provider:   "google",
+			ProviderID: userInfo.ID,
+		}
+
+		if err := database.DB.Create(&user).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user"})
+			return
+		}
+	} else if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
+		return
+	}
+
+	token, err := middleware.CreateToken(user)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create token"})
+		return
+	}
+
+	// Redirect to frontend with token
+	c.Redirect(http.StatusFound, "http://localhost:3000/auth/callback?token="+token)
+}
+
+// Google OAuth - Client-side flow handlers
+type GoogleUserRequest struct {
+	GoogleUser struct {
+		ID            string `json:"id"`
+		Email         string `json:"email"`
+		VerifiedEmail bool   `json:"verified_email"`
+		Name          string `json:"name"`
+		Picture       string `json:"picture"`
+	} `json:"google_user"`
+}
+
+func GoogleLoginClient(c *gin.Context) {
+	var req GoogleUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	var user models.User
+	result := database.DB.Where("provider = ? AND provider_id = ?", "google", req.GoogleUser.ID).First(&user)
+
+	if result.Error == gorm.ErrRecordNotFound {
+		c.JSON(http.StatusNotFound, gin.H{"error": "user not found, please register first"})
+		return
+	} else if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
+		return
+	}
+
+	token, err := middleware.CreateToken(user)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create token"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"token": token,
+		"user":  gin.H{"id": user.ID},
+	})
+}
+
+func GoogleRegisterClient(c *gin.Context) {
+	var req GoogleUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	// Check if user already exists with this Google ID
+	var existingUser models.User
+	result := database.DB.Where("provider = ? AND provider_id = ?", "google", req.GoogleUser.ID).First(&existingUser)
+
+	if result.Error == nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "user already exists, please login"})
+		return
+	}
+
+	// Check if email is already used
+	result = database.DB.Where("email = ?", req.GoogleUser.Email).First(&existingUser)
+	if result.Error == nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "email already registered with another account"})
+		return
+	}
+
+	// Create new user
+	username := generateUsername(req.GoogleUser.Email)
+	password := services.GenerateRandomPassword(16)
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+
+	user := models.User{
+		Username:   username,
+		Email:      req.GoogleUser.Email,
+		Password:   string(hashedPassword),
+		ImageURL:   req.GoogleUser.Picture,
+		Provider:   "google",
+		ProviderID: req.GoogleUser.ID,
+	}
+
+	if err := database.DB.Create(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user"})
+		return
+	}
+
+	token, err := middleware.CreateToken(user)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create token"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"token": token,
+		"user":  gin.H{"id": user.ID},
+	})
+}
+
+// -------------- PROFILE MANAGEMENT --------------
 
 func GetMyProfile(c *gin.Context) {
 	userID, exists := c.Get("userID")
@@ -99,14 +347,12 @@ func GetMyProfile(c *gin.Context) {
 }
 
 func UploadProfileImage(c *gin.Context) {
-	// Get userID from context (STRING from JWT)
 	userVal, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
 
-	// Convert string to uint
 	userIDStr, ok := userVal.(string)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user ID type"})
@@ -119,20 +365,17 @@ func UploadProfileImage(c *gin.Context) {
 		return
 	}
 
-	// Get uploaded file
 	fileHeader, err := c.FormFile("image")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "no image uploaded"})
 		return
 	}
 
-	// Validate file
 	if err := services.ValidateImageFile(fileHeader); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Open file
 	src, err := fileHeader.Open()
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to open image"})
@@ -140,28 +383,23 @@ func UploadProfileImage(c *gin.Context) {
 	}
 	defer src.Close()
 
-	// Get current user to check for old image
 	var user models.User
 	if err := database.DB.First(&user, userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 		return
 	}
 
-	// Delete old image from Cloudinary if exists
 	if user.ImageURL != "" {
-		// Extract public_id from URL (e.g., socialapp_users/user_123)
 		oldPublicID := fmt.Sprintf("socialapp_users/user_%d", userID)
-		_ = services.DeleteUserImage(oldPublicID) // Ignore error if deletion fails
+		_ = services.DeleteUserImage(oldPublicID)
 	}
 
-	// Upload new image to Cloudinary
 	url, err := services.UploadUserImage(src, fmt.Sprintf("user_%d", userID))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "upload failed"})
 		return
 	}
 
-	// Update DB
 	if err := database.DB.Model(&models.User{}).Where("id = ?", userID).Update("image_url", url).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update user image"})
 		return
@@ -174,14 +412,12 @@ func UploadProfileImage(c *gin.Context) {
 }
 
 func UpdateProfile(c *gin.Context) {
-	// Get userID from context (it's a STRING from JWT)
 	userVal, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
 
-	// Convert string to uint
 	userIDStr, ok := userVal.(string)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user ID type"})
@@ -204,13 +440,11 @@ func UpdateProfile(c *gin.Context) {
 		return
 	}
 
-	// At least one field should be provided
 	if req.Username == "" && req.Email == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "provide username or email to update"})
 		return
 	}
 
-	// Call service to update profile
 	user, err := services.UpdateUserProfile(uint(userID), req.Username, req.Email)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -224,14 +458,12 @@ func UpdateProfile(c *gin.Context) {
 }
 
 func UpdatePassword(c *gin.Context) {
-	// Get userID from context (it's a STRING from JWT)
 	userVal, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
 
-	// Convert string to uint
 	userIDStr, ok := userVal.(string)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user ID type"})
@@ -244,7 +476,6 @@ func UpdatePassword(c *gin.Context) {
 		return
 	}
 
-	// ✅ NEW: Check if this is an OAuth user (they can't change password)
 	var user models.User
 	if err := database.DB.First(&user, userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
@@ -262,19 +493,16 @@ func UpdatePassword(c *gin.Context) {
 		return
 	}
 
-	// Validate input
 	if req.OldPassword == "" || req.NewPassword == "" || req.ConfirmNewPassword == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "all password fields are required"})
 		return
 	}
 
-	// Check if new passwords match
 	if req.NewPassword != req.ConfirmNewPassword {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "new passwords do not match"})
 		return
 	}
 
-	// Call service to update password
 	if err := services.UpdateUserPassword(uint(userID), req.OldPassword, req.NewPassword); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

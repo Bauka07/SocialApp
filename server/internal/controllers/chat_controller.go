@@ -355,9 +355,26 @@ func GetMessages(c *gin.Context) {
 		filteredMessages = []models.Message{}
 	}
 
+	// FIXED: Only mark as read if there are actually unread messages
+	// Check count first before updating
+	var unreadCount int64
 	database.DB.Model(&models.Message{}).
-		Where("sender_id = ? AND receiver_id = ? AND is_read = ?", otherUserID, userID, false).
-		Update("is_read", true)
+		Where("sender_id = ? AND receiver_id = ? AND is_read = ? AND deleted_for_receiver = ?",
+			otherUserID, userID, false, false).
+		Count(&unreadCount)
+
+	if unreadCount > 0 {
+		// Only update if there are unread messages
+		result := database.DB.Model(&models.Message{}).
+			Where("sender_id = ? AND receiver_id = ? AND is_read = ?", otherUserID, userID, false).
+			Update("is_read", true)
+
+		if result.Error != nil {
+			log.Printf("Error marking messages as read: %v", result.Error)
+		} else {
+			log.Printf("✅ Marked %d messages as read", result.RowsAffected)
+		}
+	}
 
 	c.JSON(http.StatusOK, filteredMessages)
 }
