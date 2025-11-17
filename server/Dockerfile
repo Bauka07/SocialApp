@@ -1,5 +1,8 @@
 # 1. Build stage
-FROM golang:1.25-alpine AS builder
+FROM golang:1.23-alpine AS builder
+
+# Install ca-certificates for HTTPS requests during build
+RUN apk update && apk --no-cache add ca-certificates git
 
 WORKDIR /app
 
@@ -17,7 +20,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-w -s" -o 
 FROM alpine:latest
 
 # Install ca-certificates for HTTPS requests
-RUN apk --no-cache add ca-certificates
+RUN apk update && apk --no-cache add ca-certificates
 
 WORKDIR /root/
 
