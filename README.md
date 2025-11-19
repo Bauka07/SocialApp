@@ -79,7 +79,7 @@ Social Media Platform is a modern, full-featured social networking application t
 ![Home Page](./client/src/assets/home.png)
 
 ### About Page
-![About Feed](./client/src/assets/about.png)
+![About Feed](./client/src/assets/aboutpage.png)
 
 ### Contact Page
 ![Contact Profile](./client/src/assets/contact_page.png)
@@ -89,6 +89,9 @@ Social Media Platform is a modern, full-featured social networking application t
 
 ### reCAPTCHA Protection
 ![Recaptcha](./client/src/assets/recapthca.png)
+
+### Forgot Password
+![Forgot Password](./client/src/assets/resetpassword.png)
 
 ### Main Feed
 ![Main Feed](./client/src/assets/feedpage.png)
