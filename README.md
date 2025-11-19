@@ -67,9 +67,14 @@ Social Media Platform is a modern, full-featured social networking application t
 
 ## 🎬 Demo
 
-**Demo Video:** [Your video link here]
+### Video Demos
 
-> Add a link to your demo video on YouTube, Vimeo, or upload a video file to your repository
+- **🏠 Landing Page:** [Watch on YouTube](https://youtu.be/B2iaL2uM9wE)
+- **🔐 Login Page:** [Watch on YouTube](https://youtu.be/nVSN5ZDLV0U)
+- **📱 Feed Page:** [Watch on YouTube](https://youtu.be/B-8JBJ7ndmY)
+- **👤 Profile Page:** [Watch on YouTube](https://youtu.be/mDZhU4MuHCs)
+- **💬 Chat Page:** [Watch on YouTube](https://youtube.com/shorts/Ka1_JUoKcvo)
+- **⚙️ Settings Page:** [Watch on YouTube](https://youtu.be/Fiy8WJLaqoc)
 
 ---
 
@@ -79,7 +84,7 @@ Social Media Platform is a modern, full-featured social networking application t
 ![Home Page](./client/src/assets/home.png)
 
 ### About Page
-![About Feed](./client/src/assets/aboutpage.png)
+![About Feed](./client/src/assets/about.png)
 
 ### Contact Page
 ![Contact Profile](./client/src/assets/contact_page.png)
@@ -89,9 +94,6 @@ Social Media Platform is a modern, full-featured social networking application t
 
 ### reCAPTCHA Protection
 ![Recaptcha](./client/src/assets/recapthca.png)
-
-### Forgot Password
-![Forgot Password](./client/src/assets/resetpassword.png)
 
 ### Main Feed
 ![Main Feed](./client/src/assets/feedpage.png)
