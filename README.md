@@ -76,32 +76,32 @@ Social Media Platform is a modern, full-featured social networking application t
 ## 📸 Screenshots
 
 ### Home Page
-![Home Page](./home.png)
+![Home Page](./client/src/assets/home.png)
 
 ### About Page
-![About Feed](./about.png)
+![About Feed](./client/src/assets/about.png)
 
 ### Contact Page
-![Contact Profile](./contact_page.png)
+![Contact Profile](./client/src/assets/contact_page.png)
 
 ### Login & Authentication
-![Login Page](./fixed_login.png)
+![Login Page](./client/src/assets/fixed_login.png)
 
 ### reCAPTCHA Protection
-![Recaptcha](./recapthca.png)
+![Recaptcha](./client/src/assets/recapthca.png)
 
 ### Main Feed
-![Main Feed](./feedpage.png)
+![Main Feed](./client/src/assets/feedpage.png)
 
 ### User Profile
-![User Profile](./profile.png)
+![User Profile](./client/src/assets/profile.png)
 
 ### Real-Time Chat
-![Real-time Chat](./messages.png)
+![Real-time Chat](./client/src/assets/messages.png)
 
 ### Settings
-![Settings Page](./settings.png)
-![Settings Page](./settings1.png)
+![Settings Page](./client/src/assets/settings.png)
+![Settings Page](./client/src/assets/settings1.png)
 
 ---
 
@@ -293,41 +293,6 @@ docker compose down
 
 ---
 
-## 📖 Usage
-
-### Creating an Account
-
-1. Navigate to http://localhost:5173
-2. Click **"Sign Up"**
-3. Choose between:
-   - Manual registration (email + password)
-   - Google OAuth (one-click signup)
-4. Complete reCAPTCHA verification
-5. Verify your email (if using manual signup)
-
-### Creating a Post
-
-1. Log in to your account
-2. Click **"Create Post"** button
-3. Add text content and/or upload images
-4. Click **"Post"** to share
-
-### Messaging Friends
-
-1. Click the **"Messages"** icon
-2. Search for a friend by username
-3. Start a conversation
-4. Messages appear in real-time!
-
-### Resetting Password
-
-1. On login page, click **"Forgot Password?"**
-2. Enter your email
-3. Check your email for verification code
-4. Enter code and set new password
-
----
-
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
@@ -346,13 +311,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
    git push origin feature/AmazingFeature
    ```
 5. **Open a Pull Request**
-
-### Development Guidelines
-
-- Follow Go and React best practices
-- Write clear commit messages
-- Add tests for new features
-- Update documentation as needed
 
 ---
 
