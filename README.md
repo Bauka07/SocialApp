@@ -72,8 +72,8 @@ Social Media Platform is a modern, full-featured social networking application t
 - **🏠 Landing Page:** [Watch on YouTube](https://youtu.be/B2iaL2uM9wE)
 - **🔐 Login Page:** [Watch on YouTube](https://youtu.be/nVSN5ZDLV0U)
 - **📱 Feed Page:** [Watch on YouTube](https://youtu.be/B-8JBJ7ndmY)
-- **👤 Profile Page:** [Watch on YouTube](https://youtu.be/mDZhU4MuHCs)
-- **💬 Chat Page:** [Watch on YouTube](https://youtube.com/shorts/Ka1_JUoKcvo)
+- **👤 Profile Page:** [Watch on YouTube](https://youtu.be/8Fi9IV9L83Q)
+- **💬 Chat Page:** [Watch on YouTube](https://youtube.com/shorts/Wfy7xy6nSyA)
 - **⚙️ Settings Page:** [Watch on YouTube](https://youtu.be/Fiy8WJLaqoc)
 
 ---
