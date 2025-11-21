@@ -355,6 +355,6 @@ For questions or feedback, use the contact form within the application or reach 
 
 **⭐ Star this repository if you find it helpful!**
 
-Made with ❤️ by [MaqsattoTeam](https://github.com/MaqsattoTeam)
+Made with ❤️ by [ApexTeam](https://github.com/ApexTeam)
 
 </div>
