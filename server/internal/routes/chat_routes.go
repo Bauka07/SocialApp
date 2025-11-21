@@ -6,23 +6,22 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func ChatRoutes(r *gin.Engine) {
-	r.GET("/ws", controllers.WebSocketHandler)
+func ChatRoutes(r *gin.RouterGroup) {
+	// WebSocket is handled in main.go at root level
 
-	api := r.Group("/api")
-	api.Use(middleware.AuthCheck())
+	chats := r.Group("/chats")
+	chats.Use(middleware.AuthCheck())
 	{
-		api.GET("/chats", controllers.GetChats)
-		api.GET("/messages/:user_id", controllers.GetMessages)
-		api.PUT("/messages/:message_id/read", controllers.MarkMessageAsRead)
-		api.GET("/users/search", controllers.SearchUsers)
-		api.GET("/user/me", controllers.GetMyProfile)
+		chats.GET("", controllers.GetChats)
+		chats.DELETE("/:user_id", controllers.DeleteChat)
+	}
 
-		// Message management (owner only)
-		api.PUT("/messages/:message_id", controllers.EditMessage)
-		api.DELETE("/messages/:message_id", controllers.DeleteMessage)
-
-		// Chat management
-		api.DELETE("/chats/:user_id", controllers.DeleteChat)
+	messages := r.Group("/messages")
+	messages.Use(middleware.AuthCheck())
+	{
+		messages.GET("/:user_id", controllers.GetMessages)
+		messages.PUT("/:message_id/read", controllers.MarkMessageAsRead)
+		messages.PUT("/:message_id", controllers.EditMessage)
+		messages.DELETE("/:message_id", controllers.DeleteMessage)
 	}
 }

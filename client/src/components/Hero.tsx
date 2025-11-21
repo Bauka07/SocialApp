@@ -5,7 +5,7 @@ const Hero = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="relative overflow-hidden py-24 md:py-32">
+    <div className="relative overflow-hidden py-16 md:py-24 lg:py-32 px-4">
       {/* Subtle animated background */}
       <div className="absolute top-0 left-0 w-96 h-96 bg-orange-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob" />
       <div className="absolute top-0 right-0 w-96 h-96 bg-orange-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000" />
@@ -20,7 +20,7 @@ const Hero = () => {
           </div>
 
           {/* Main heading with enhanced gradient */}
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-4 md:mb-6 leading-tight">
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900">
               Connect & Share
             </span>
@@ -31,16 +31,16 @@ const Hero = () => {
           </h1>
 
           {/* Subtitle */}
-          <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-10 leading-relaxed">
+          <p className="text-base md:text-lg lg:text-xl text-gray-600 max-w-2xl mx-auto mb-8 md:mb-10 leading-relaxed px-4">
             Join thousands of users sharing amazing content and building meaningful 
             connections. Start your journey today and be part of something special.
           </p>
 
-          {/* CTA Buttons with enhanced effects */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
+          {/* CTA Buttons with enhanced effects - FIXED */}
+          <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center mb-12 md:mb-16 px-4">
             <Button
               size="lg"
-              className="group px-8 py-6 text-base bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+              className="group px-8 py-6 text-base bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 w-full sm:w-auto"
               onClick={() => navigate("/login")}
             >
               Get Started 
@@ -49,26 +49,26 @@ const Hero = () => {
             <Button
               size="lg"
               variant="outline"
-              className="px-8 py-6 text-base border-2 border-gray-200 hover:border-orange-500 hover:bg-orange-50 text-gray-700 font-semibold rounded-xl transition-all duration-300"
+              className="px-8 py-6 text-base border-2 border-gray-200 hover:border-orange-500 hover:bg-orange-50 text-gray-700 font-semibold rounded-xl transition-all duration-300 w-full sm:w-auto"
               onClick={() => navigate("/contact")}
             >
               Learn More
             </Button>
           </div>
 
-          {/* Enhanced stats with cards */}
-          <div className="grid grid-cols-3 gap-6 max-w-3xl mx-auto">
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-orange-100 hover:shadow-xl transition-shadow duration-300">
-              <div className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-orange-500 to-orange-600 mb-2">10+</div>
-              <div className="text-sm text-gray-600 font-medium">Active Users</div>
+          {/* Enhanced stats with cards - FIXED */}
+          <div className="grid grid-cols-3 gap-4 md:gap-6 max-w-3xl mx-auto px-4">
+            <div className="bg-white/80 backdrop-blur-sm rounded-xl md:rounded-2xl p-4 md:p-6 shadow-lg border border-orange-100 hover:shadow-xl transition-shadow duration-300">
+              <div className="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-orange-500 to-orange-600 mb-1 md:mb-2">10+</div>
+              <div className="text-xs md:text-sm text-gray-600 font-medium">Active Users</div>
             </div>
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-orange-100 hover:shadow-xl transition-shadow duration-300">
-              <div className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-orange-500 to-orange-600 mb-2">50+</div>
-              <div className="text-sm text-gray-600 font-medium">Posts Shared</div>
+            <div className="bg-white/80 backdrop-blur-sm rounded-xl md:rounded-2xl p-4 md:p-6 shadow-lg border border-orange-100 hover:shadow-xl transition-shadow duration-300">
+              <div className="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-orange-500 to-orange-600 mb-1 md:mb-2">50+</div>
+              <div className="text-xs md:text-sm text-gray-600 font-medium">Posts Shared</div>
             </div>
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-orange-100 hover:shadow-xl transition-shadow duration-300">
-              <div className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-orange-500 to-orange-600 mb-2">4.9★</div>
-              <div className="text-sm text-gray-600 font-medium">User Rating</div>
+            <div className="bg-white/80 backdrop-blur-sm rounded-xl md:rounded-2xl p-4 md:p-6 shadow-lg border border-orange-100 hover:shadow-xl transition-shadow duration-300">
+              <div className="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-orange-500 to-orange-600 mb-1 md:mb-2">4.9★</div>
+              <div className="text-xs md:text-sm text-gray-600 font-medium">User Rating</div>
             </div>
           </div>
         </div>

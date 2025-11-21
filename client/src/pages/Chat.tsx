@@ -50,8 +50,8 @@ interface ChatContextMenu {
   chatUserId: number;
 }
 
-import { API_URL } from "@/config/config";
-const WS_URL = API_URL.replace(/^http/, "ws") + "/ws";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:8080/ws";
 
 const Chat: React.FC = () => {
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
@@ -130,7 +130,7 @@ const Chat: React.FC = () => {
           return;
         }
         
-        const response = await fetch(`${API_URL}/user/me`, {
+        const response = await fetch(`${API_URL}/users/me`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -748,12 +748,15 @@ const Chat: React.FC = () => {
   });
 
   return (
-    <div className="flex h-screen bg-gray-50 select-none">
+    <div className="flex h-screen bg-gray-50 select-none overflow-hidden">
+      {/* Sidebar - Full width on mobile, resizable on desktop */}
       <div
-        className="bg-white border-r border-gray-200 flex flex-col"
-        style={{ width: sidebarWidth }}
+        className={`bg-white border-r border-gray-200 flex flex-col w-full md:w-auto ${
+          selectedChat ? 'hidden md:flex' : 'flex'
+        }`}
+        style={{ width: typeof window !== 'undefined' && window.innerWidth >= 768 ? sidebarWidth : '100%' }}
       >
-        <div className="p-4 border-b border-gray-200">
+        <div className="p-3 md:p-4 border-b border-gray-200 sticky top-0 bg-white z-10">
           <div className="relative">
             <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
@@ -869,16 +872,26 @@ const Chat: React.FC = () => {
 
       <div
         onMouseDown={handleMouseDown}
-        className={`w-1 cursor-col-resize transition ${
+        className={`hidden md:block w-1 cursor-col-resize transition ${
           isResizing ? "bg-orange-500 shadow-md" : "bg-gray-200 hover:bg-orange-400"
         }`}
       />
 
-      <div className="flex-1 flex flex-col">
+      <div className={`flex-1 flex-col ${selectedChat ? 'flex' : 'hidden md:flex'}`}>
         {selectedChat ? (
           <>
-            <div className="bg-white border-b border-gray-200 p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
+            <div className="bg-white border-b border-gray-200 p-3 md:p-4 flex items-center justify-between">
+              {/* Mobile Back Button */}
+              <button 
+                onClick={() => setSelectedChat(null)}
+                className="md:hidden mr-2 p-2 hover:bg-gray-100 rounded-lg transition"
+              >
+                <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              
+              <div className="flex items-center gap-3 flex-1">
                 <div className="relative">
                   <img
                     src={getAvatarUrl(selectedChat.user)}
@@ -1006,7 +1019,7 @@ const Chat: React.FC = () => {
                   }}
                   onKeyPress={handleKeyPress}
                   placeholder="Type a message..."
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="flex-1 px-3 md:px-4 py-2 md:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm md:text-base"
                 />
 
                 <button

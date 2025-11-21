@@ -1,2 +1,29 @@
 "server/tmp/main.exe" 
 setup-production.sh
+# Environment variables
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Dependencies
+node_modules/
+vendor/
+
+# Build outputs
+dist/
+build/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml

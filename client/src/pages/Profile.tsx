@@ -567,10 +567,10 @@ const Profile: React.FC = () => {
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/10 to-white/50"></div>
           </div>
           
-          <div className="px-6 md:px-10 pb-8 relative z-20">
-            <div className="flex flex-col md:flex-row md:items-end gap-6 -mt-20 md:-mt-24">
-              <div className="relative group z-30">
-                <div className="w-26 h-26 md:w-30 md:h-30 rounded-full border-6 border-white shadow-2xl bg-white overflow-hidden ring-4 ring-orange-100">
+          <div className="px-4 md:px-6 lg:px-10 pb-6 md:pb-8 relative z-20">
+            <div className="flex flex-col md:flex-row md:items-end gap-4 md:gap-6 -mt-16 md:-mt-20 lg:-mt-24">
+              <div className="relative group z-30 mx-auto md:mx-0">
+                <div className="w-24 h-24 md:w-28 md:h-28 lg:w-32 lg:h-32 rounded-full border-4 md:border-6 border-white shadow-2xl bg-white overflow-hidden ring-4 ring-orange-100">
                   {user.image_url ? (
                     <img
                       src={user.image_url}
@@ -585,18 +585,18 @@ const Profile: React.FC = () => {
                     </div>
                   )}
                 </div>
-                <div className="absolute bottom-2 right-2 w-8 h-8 bg-green-500 border-4 border-white rounded-full shadow-lg"></div>
+                  <div className="absolute bottom-1 right-1 md:bottom-2 md:right-2 w-4 h-4 md:w-6 md:h-6 bg-green-500 border-2 md:border-4 border-white rounded-full shadow-lg"></div>
               </div>
 
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
+              <div className="flex-1 text-center md:text-left">
+                <div className="flex items-center justify-center md:justify-start gap-2 md:gap-3 mb-2">
+                  <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900">
                     @{user?.username || 'Username'}
                   </h1>
                 </div>
                 
-                <div className="flex gap-6 mb-4">
-                  <div className="bg-gradient-to-br from-orange-50 to-orange-100 px-6 py-3 rounded-2xl border-2 border-orange-200 shadow-md">
+                <div className="flex flex-wrap justify-center md:justify-start gap-3 md:gap-6 mb-4">
+                  <div className="bg-gradient-to-br from-orange-50 to-orange-100 px-4 py-2 md:px-6 md:py-3 rounded-2xl border-2 border-orange-200 shadow-md">
                     <div className="flex items-center gap-3">
                       <FiImage className="w-6 h-6 text-orange-600" />
                       <div>
@@ -620,17 +620,17 @@ const Profile: React.FC = () => {
         </div>
 
         {/* Tab Navigation */}
-        <div className="bg-white rounded-2xl shadow-xl mb-8 p-2 flex gap-2 mx-auto w-full md:w-auto">
+        <div className="bg-white rounded-2xl shadow-xl mb-8 p-2 flex gap-2 w-full overflow-x-auto scrollbar-hide">
           <button
             onClick={() => setActiveTab("posts")}
-            className={`flex-1 md:flex-initial py-4 px-8 rounded-xl font-bold transition-all flex items-center justify-center gap-3 ${
+            className={`flex-1 min-w-[110px] md:min-w-0 md:flex-initial py-3 px-4 md:py-4 md:px-8 rounded-xl font-bold transition-all flex items-center justify-center gap-2 md:gap-3 whitespace-nowrap ${
               activeTab === "posts"
                 ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg scale-105"
                 : "text-gray-600 hover:bg-gray-50"
             }`}
           >
-            <FiImage className="w-5 h-5" />
-            <span>My Posts</span>
+            <FiImage className="w-4 h-4 md:w-5 md:h-5" />
+            <span className="text-sm md:text-base">My Posts</span>
             <span className={`px-3 py-1 rounded-full text-sm font-bold ${
               activeTab === "posts" ? "bg-white/20" : "bg-orange-100 text-orange-600"
             }`}>
@@ -665,11 +665,11 @@ const Profile: React.FC = () => {
 
         {/* Create Post Tab */}
         {activeTab === "create" && (
-          <div className="max-w-5xl mx-auto">
+          <div className="w-full max-w-5xl mx-auto px-2 md:px-4">
             {/* Modern Header with Stats */}
-            <div className="mb-8 flex items-center justify-between">
+            <div className="mb-6 md:mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div>
-                <h2 className="text-3xl font-bold text-gray-900 mb-2">Create New Post</h2>
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Create New Post</h2>
                 <p className="text-gray-600">Share your story with the community</p>
               </div>
               <div className="hidden md:flex items-center gap-3 bg-gradient-to-r from-orange-50 to-red-50 px-6 py-3 rounded-2xl border border-orange-200">
@@ -689,7 +689,7 @@ const Profile: React.FC = () => {
               {/* Image Upload Section - Full Width */}
               <div className="relative">
                 {newPostImagePreview ? (
-                  <div className="p-8 md:p-12">
+                  <div className="p-4 md:p-8 lg:p-12">
                     <div className="max-w-3xl mx-auto">
                       <div className="relative group rounded-2xl overflow-hidden shadow-xl">
                         <img
@@ -778,7 +778,7 @@ const Profile: React.FC = () => {
                       placeholder="Enter an engaging title for your post..."
                       value={newPost.title}
                       onChange={(e) => setNewPost({ ...newPost, title: e.target.value })}
-                      className="w-full px-5 py-4 border-2 border-gray-200 hover:border-orange-300 focus:border-orange-500 focus:ring-4 focus:ring-orange-100 rounded-2xl text-lg font-semibold transition-all outline-none placeholder:text-gray-400 placeholder:font-normal"
+                      className="w-full px-4 py-3 md:px-5 md:py-4 border-2 border-gray-200 hover:border-orange-300 focus:border-orange-500 focus:ring-2 md:focus:ring-4 focus:ring-orange-100 rounded-xl md:rounded-2xl text-base md:text-lg font-semibold transition-all outline-none placeholder:text-gray-400 placeholder:font-normal"
                       maxLength={100}
                     />
                     <div className="flex justify-between items-center mt-2">
@@ -806,8 +806,8 @@ const Profile: React.FC = () => {
                       placeholder="Share your thoughts, ideas, or story here..."
                       value={newPost.content}
                       onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
-                      rows={12}
-                      className="w-full px-5 py-4 border-2 border-gray-200 hover:border-orange-300 focus:border-orange-500 focus:ring-4 focus:ring-orange-100 rounded-2xl text-base leading-relaxed resize-none transition-all outline-none placeholder:text-gray-400"
+                      rows={8}
+                      className="w-full px-4 py-3 md:px-5 md:py-4 border-2 border-gray-200 hover:border-orange-300 focus:border-orange-500 focus:ring-2 md:focus:ring-4 focus:ring-orange-100 rounded-xl md:rounded-2xl text-sm md:text-base leading-relaxed resize-none transition-all outline-none placeholder:text-gray-400 min-h-[200px] md:min-h-0"
                       maxLength={5000}
                     />
                     <div className="flex justify-between items-center mt-2">

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Bauka07/SocialApp/internal/config"
+	"github.com/Bauka07/SocialApp/internal/controllers" // ← ADD THIS!
 	"github.com/Bauka07/SocialApp/internal/database"
 	"github.com/Bauka07/SocialApp/internal/models"
 	"github.com/Bauka07/SocialApp/internal/routes"
@@ -17,10 +18,7 @@ import (
 )
 
 func main() {
-	// Load .env from parent directory
-	// Try to load .env from current directory
 	if err := godotenv.Load(".env"); err != nil {
-		// If not found, try one level up (for Air builds)
 		if err2 := godotenv.Load("../.env"); err2 != nil {
 			log.Println("Warning: .env file not found, relying on environment variables")
 		} else {
@@ -30,32 +28,27 @@ func main() {
 		log.Println(".env file loaded successfully")
 	}
 
-	// Initialize configuration (JWT, etc.)
 	config.InitConfig()
 	config.InitCloudinary()
 	services.InitGoogleOAuth()
 
-	// Initialize Gin
 	r := gin.Default()
 
-	// CORS configuration - ALWAYS allow all origins in development
 	corsConfig := cors.Config{
-		AllowAllOrigins:  true,
-		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With"},
-		ExposeHeaders:    []string{"Content-Length", "Content-Type"},
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"*"},
+		AllowHeaders:     []string{"*"},
+		ExposeHeaders:    []string{"*"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}
 
 	r.Use(cors.New(corsConfig))
 
-	log.Println("✅ CORS enabled for all origins")
+	log.Println("🚨 CORS is FULLY OPEN (DEV MODE ONLY) — do not use in production!")
 
-	// Connect to the database
 	database.ConnectDB()
 
-	// IMPORTANT: Include Message model in AutoMigrate
 	if err := database.DB.AutoMigrate(
 		&models.User{},
 		&models.Contact{},
@@ -64,36 +57,40 @@ func main() {
 		&models.Like{},
 		&models.Comment{},
 		&models.PostWithStats{},
-		&models.PasswordReset{}, // Added password reset model
+		&models.PasswordReset{},
 	); err != nil {
 		fmt.Println("Migration error:", err)
 	} else {
 		fmt.Println("Database migrated successfully")
 	}
 
-	// Routes
-	routes.UserRoutes(r)
-	routes.ContactRoutes(r)
-	routes.PostRoutes(r)
-	routes.ChatRoutes(r)
-	routes.SetupPasswordResetRoutes(r) // Fixed: removed comma and used correct variable 'r'
-
+	// Health check at root
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "Server Running Successfully..."})
 	})
 
-	// Start the server
+	// WebSocket at root level (not under /api)
+	r.GET("/ws", controllers.WebSocketHandler)
+
+	// All other routes under /api
+	api := r.Group("/api")
+	{
+		routes.UserRoutes(api)
+		routes.ContactRoutes(api)
+		routes.PostRoutes(api)
+		routes.ChatRoutes(api)
+		routes.SetupPasswordResetRoutes(api)
+	}
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
 
-	// Listen on all interfaces (0.0.0.0) to allow external connections
 	log.Printf("🚀 Server starting on 0.0.0.0:%s...", port)
-	log.Printf("📍 Access via:")
-	log.Printf("   - http://localhost:%s", port)
-	log.Printf("   - http://127.0.0.1:%s", port)
-	log.Printf("   - http://26.176.162.130:%s (if this is your IP)", port)
+	log.Printf("📍 Routes configured:")
+	log.Printf("   - WebSocket: ws://localhost:%s/ws", port)
+	log.Printf("   - API: http://localhost:%s/api", port)
 
 	r.Run("0.0.0.0:" + port)
 }

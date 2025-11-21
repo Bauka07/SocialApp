@@ -24,7 +24,7 @@ const Contact: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post(`${API_URL}/api/contact`, formData);
+      const response = await axios.post(`${API_URL}/contact`, formData);
       toast.success(response.data.message || "Message sent successfully! We'll get back to you soon.");
       setFormData({ name: "", email: "", message: "" });
     } catch (error: any) {

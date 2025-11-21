@@ -1,4 +1,3 @@
-// internal/routes/contact_routes.go
 package routes
 
 import (
@@ -6,7 +5,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func ContactRoutes(r *gin.Engine) {
-	api := r.Group("/api")
-	api.POST("/contact", controllers.ContactHandler)
+func ContactRoutes(r *gin.RouterGroup) {
+	r.POST("/contact", controllers.ContactHandler)
 }
