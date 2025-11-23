@@ -2,7 +2,7 @@
 
 > A full-stack social media application with real-time messaging, post sharing, and user authentication built with React and Golang.
 
-🌍 Live Website: http://maqsatto.tech/
+🌍 Live Website: https://maqsatto.tech/
 
 [![React](https://img.shields.io/badge/React-18.x-blue.svg)](https://reactjs.org/)
 [![Go](https://img.shields.io/badge/Go-1.x-00ADD8.svg)](https://golang.org/)
